@@ -426,24 +426,39 @@ function spawnItem() {
 }
 
 function checkGameOver() {
-    // New game over mechanic: Check horizontal coverage above y=0
-    // Game over only when >50% of horizontal space is blocked by settled items above the top frame
+    // Game over mechanic #1: Check horizontal coverage above y=0
+    // Game over when >50% of horizontal space is blocked by settled items above the top frame
+    //
+    // Game over mechanic #2: Overflow line at y=-100 (100px above visible frame)
+    // If 100% of any settled item is above this line, game over immediately.
+    // This catches the case where items are stacked high on one side without
+    // reaching the 50% horizontal coverage threshold.
 
     const stackedBodies = world.bodies.filter(b => !b.isStatic);
     const TRUCK_INTERIOR_START = 30;  // Left door width
     const TRUCK_INTERIOR_END = 370;   // Right door starts at 370
     const TRUCK_INTERIOR_WIDTH = TRUCK_INTERIOR_END - TRUCK_INTERIOR_START;  // 340px total
     const COVERAGE_THRESHOLD = TRUCK_INTERIOR_WIDTH * 0.5;  // 170px (50% coverage)
+    const OVERFLOW_LINE_Y = -100;  // 100px above visible frame
 
     // Track which horizontal segments are blocked above y=0
     const blockedSegments = [];
 
     for (let body of stackedBodies) {
-        const topY = body.bounds.min.y;  // Top edge of item
-        const velocity = body.velocity.y;  // Vertical velocity
+        const topY = body.bounds.min.y;     // Top edge of item
+        const bottomY = body.bounds.max.y;  // Bottom edge of item
+        const velocity = body.velocity.y;   // Vertical velocity
 
-        // Only check settled items that extend above y=0 (above visible truck frame)
-        if (topY < 0 && Math.abs(velocity) < 0.5) {
+        // Check if item is settled (low velocity)
+        const isSettled = Math.abs(velocity) < 0.5;
+
+        // Mechanic #2: If entire item is above the overflow line and settled, game over
+        if (isSettled && bottomY < OVERFLOW_LINE_Y) {
+            return true;
+        }
+
+        // Mechanic #1: Check settled items that extend above y=0 (above visible truck frame)
+        if (topY < 0 && isSettled) {
             // Item is settled and extends above the top frame
             const leftX = Math.max(body.bounds.min.x, TRUCK_INTERIOR_START);
             const rightX = Math.min(body.bounds.max.x, TRUCK_INTERIOR_END);
