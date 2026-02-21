@@ -236,13 +236,18 @@ function initPhysics() {
         label: 'floor'
     });
 
-    const leftWall = Bodies.rectangle(30, TRUCK_HEIGHT / 2, 20, TRUCK_HEIGHT, {
+    // Walls extend 300px above visible area so items stacking above the
+    // canvas top are still horizontally constrained and can't tumble off.
+    const wallHeight = TRUCK_HEIGHT + 300;
+    const wallCenterY = TRUCK_HEIGHT / 2 - 150; // shifted up so wall spans y=-300 to y=600
+
+    const leftWall = Bodies.rectangle(30, wallCenterY, 20, wallHeight, {
         isStatic: true,
         friction: 0.5,
         label: 'leftWall'
     });
 
-    const rightWall = Bodies.rectangle(370, TRUCK_HEIGHT / 2, 20, TRUCK_HEIGHT, {
+    const rightWall = Bodies.rectangle(370, wallCenterY, 20, wallHeight, {
         isStatic: true,
         friction: 0.5,
         label: 'rightWall'
@@ -426,22 +431,24 @@ function spawnItem() {
 }
 
 function checkGameOver() {
-    // Game over mechanic #1: Check horizontal coverage above y=0
-    // Game over when >50% of horizontal space is blocked by settled items above the top frame
+    // Game over mechanic #1: Horizontal coverage near top of truck
+    // The fill line is at y=80 (near the top of the visible truck area).
+    // When items stack high enough that >50% of the truck width is blocked
+    // at that height, the truck is full.
     //
-    // Game over mechanic #2: Overflow line at y=-100 (100px above visible frame)
-    // If 100% of any settled item is above this line, game over immediately.
-    // This catches the case where items are stacked high on one side without
-    // reaching the 50% horizontal coverage threshold.
+    // Game over mechanic #2: Overflow ceiling at y=-30 (just above visible frame)
+    // If ANY non-current item's top crosses this line, game over immediately.
+    // This is the absolute ceiling — nothing should stack above the visible area.
 
     const stackedBodies = world.bodies.filter(b => !b.isStatic);
     const TRUCK_INTERIOR_START = 30;  // Left door width
     const TRUCK_INTERIOR_END = 370;   // Right door starts at 370
     const TRUCK_INTERIOR_WIDTH = TRUCK_INTERIOR_END - TRUCK_INTERIOR_START;  // 340px total
     const COVERAGE_THRESHOLD = TRUCK_INTERIOR_WIDTH * 0.5;  // 170px (50% coverage)
-    const OVERFLOW_LINE_Y = -100;  // 100px above visible frame
+    const FILL_LINE_Y = 80;    // Coverage check line near top of visible truck
+    const OVERFLOW_CEILING_Y = -30;  // Absolute ceiling just above visible area
 
-    // Track which horizontal segments are blocked above y=0
+    // Track which horizontal segments are blocked above the fill line
     const blockedSegments = [];
 
     for (let body of stackedBodies) {
@@ -449,22 +456,15 @@ function checkGameOver() {
         if (body === currentBody) continue;
 
         const topY = body.bounds.min.y;     // Top edge of item
-        const bottomY = body.bounds.max.y;  // Bottom edge of item
-        const velocity = body.velocity.y;   // Vertical velocity
 
-        // Check if item is settled (low velocity)
-        const isSettled = Math.abs(velocity) < 0.5;
-
-        // Mechanic #2: If entire item is above the overflow line and settled, game over
-        if (isSettled && bottomY < OVERFLOW_LINE_Y) {
+        // Mechanic #2: If any item's top crosses the overflow ceiling, game over immediately
+        if (topY < OVERFLOW_CEILING_Y) {
             return true;
         }
 
-        // Mechanic #1: Check ANY non-current items that extend above y=0 (above visible truck frame)
-        // Previously required items to be "settled" (velocity < 0.5), but this
-        // allowed players to exploit physics by holding movement keys to keep
-        // items in motion and avoid triggering game over.
-        if (topY < 0) {
+        // Mechanic #1: Check items that extend above the fill line
+        // No velocity requirement — moving or settled, if it's above the line it counts.
+        if (topY < FILL_LINE_Y) {
             const leftX = Math.max(body.bounds.min.x, TRUCK_INTERIOR_START);
             const rightX = Math.min(body.bounds.max.x, TRUCK_INTERIOR_END);
 
@@ -477,7 +477,7 @@ function checkGameOver() {
 
     // Merge overlapping segments and calculate total blocked width
     if (blockedSegments.length === 0) {
-        return false;  // No items above threshold
+        return false;  // No items above fill line
     }
 
     // Sort segments by left edge
