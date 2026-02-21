@@ -460,9 +460,11 @@ function checkGameOver() {
             return true;
         }
 
-        // Mechanic #1: Check settled items that extend above y=0 (above visible truck frame)
-        if (topY < 0 && isSettled) {
-            // Item is settled and extends above the top frame
+        // Mechanic #1: Check ANY non-current items that extend above y=0 (above visible truck frame)
+        // Previously required items to be "settled" (velocity < 0.5), but this
+        // allowed players to exploit physics by holding movement keys to keep
+        // items in motion and avoid triggering game over.
+        if (topY < 0) {
             const leftX = Math.max(body.bounds.min.x, TRUCK_INTERIOR_START);
             const rightX = Math.min(body.bounds.max.x, TRUCK_INTERIOR_END);
 
@@ -508,6 +510,7 @@ function checkGameOver() {
 
 function moveItem(dx) {
     if (!currentBody || isGameOver) return;
+    if (!isPlayerControlling) return; // Can't move after drop
 
     // Apply horizontal velocity while preserving vertical velocity
     const currentVelocity = currentBody.velocity;
@@ -519,6 +522,7 @@ function moveItem(dx) {
 
 function rotateItem() {
     if (!currentBody || isGameOver) return;
+    if (!isPlayerControlling) return; // Can't rotate after drop
 
     // Rotate by 90 degrees
     const currentAngle = currentBody.angle;
@@ -555,7 +559,7 @@ function dropItem() {
         y: 5  // Increase falling speed significantly
     });
 
-    // Player can still move/rotate while fast-falling
+    // Disable player control - no more movement after drop
     isPlayerControlling = false;
     itemsPacked++;
 
