@@ -445,6 +445,9 @@ function checkGameOver() {
     const blockedSegments = [];
 
     for (let body of stackedBodies) {
+        // Skip the item currently being controlled/dropped - it hasn't settled yet
+        if (body === currentBody) continue;
+
         const topY = body.bounds.min.y;     // Top edge of item
         const bottomY = body.bounds.max.y;  // Bottom edge of item
         const velocity = body.velocity.y;   // Vertical velocity
