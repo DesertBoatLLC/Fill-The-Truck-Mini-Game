@@ -1,0 +1,183 @@
+{
+  "sprites": {
+    "couch_upholstered_tan": {
+      "file": "sprites/couch_upholstered_tan.png",
+      "w": 425,
+      "h": 201,
+      "texture": "textures/fabric_tan_tile.png",
+      "collision_polygon_px_center": [
+        [
+          -207.5,
+          -95.5
+        ],
+        [
+          206.5,
+          -95.5
+        ],
+        [
+          206.5,
+          94.5
+        ],
+        [
+          -207.5,
+          94.5
+        ]
+      ],
+      "notes": "PNG has transparency; collision polygon is a simple trimmed rectangle you can replace with a tighter poly if needed."
+    },
+    "loveseat_upholstered_tan": {
+      "file": "sprites/loveseat_upholstered_tan.png",
+      "w": 268,
+      "h": 187,
+      "texture": "textures/fabric_tan_tile.png",
+      "collision_polygon_px_center": [
+        [
+          -129.0,
+          -88.5
+        ],
+        [
+          128.0,
+          -88.5
+        ],
+        [
+          128.0,
+          87.5
+        ],
+        [
+          -129.0,
+          87.5
+        ]
+      ],
+      "notes": "PNG has transparency; collision polygon is a simple trimmed rectangle you can replace with a tighter poly if needed."
+    },
+    "armchair_upholstered_tan": {
+      "file": "sprites/armchair_upholstered_tan.png",
+      "w": 205,
+      "h": 201,
+      "texture": "textures/fabric_tan_tile.png",
+      "collision_polygon_px_center": [
+        [
+          -97.5,
+          -95.5
+        ],
+        [
+          96.5,
+          -95.5
+        ],
+        [
+          96.5,
+          94.5
+        ],
+        [
+          -97.5,
+          94.5
+        ]
+      ],
+      "notes": "PNG has transparency; collision polygon is a simple trimmed rectangle you can replace with a tighter poly if needed."
+    },
+    "ottoman_upholstered_tan": {
+      "file": "sprites/ottoman_upholstered_tan.png",
+      "w": 156,
+      "h": 177,
+      "texture": "textures/fabric_tan_tile.png",
+      "collision_polygon_px_center": [
+        [
+          -73.0,
+          -83.5
+        ],
+        [
+          72.0,
+          -83.5
+        ],
+        [
+          72.0,
+          82.5
+        ],
+        [
+          -73.0,
+          82.5
+        ]
+      ],
+      "notes": "PNG has transparency; collision polygon is a simple trimmed rectangle you can replace with a tighter poly if needed."
+    },
+    "dining_chair_wood_oak": {
+      "file": "sprites/dining_chair_wood_oak.png",
+      "w": 126,
+      "h": 250,
+      "texture": "textures/wood_oak_tile.png",
+      "collision_polygon_px_center": [
+        [
+          -58.0,
+          -120.0
+        ],
+        [
+          57.0,
+          -120.0
+        ],
+        [
+          57.0,
+          119.0
+        ],
+        [
+          -58.0,
+          119.0
+        ]
+      ],
+      "notes": "PNG has transparency; collision polygon is a simple trimmed rectangle you can replace with a tighter poly if needed."
+    }
+  },
+  "textures": {
+    "fabric_tan_tile": {
+      "file": "textures/fabric_tan_tile.png",
+      "w": 256,
+      "h": 256,
+      "tileable": true
+    },
+    "fabric_gray_tile": {
+      "file": "textures/fabric_gray_tile.png",
+      "w": 256,
+      "h": 256,
+      "tileable": true
+    },
+    "wood_oak_tile": {
+      "file": "textures/wood_oak_tile.png",
+      "w": 256,
+      "h": 256,
+      "tileable": true
+    },
+    "wood_walnut_tile": {
+      "file": "textures/wood_walnut_tile.png",
+      "w": 256,
+      "h": 256,
+      "tileable": true
+    },
+    "fabric_tan_swatch": {
+      "file": "textures/swatches_from_sheet/fabric_tan_swatch.png",
+      "w": 145,
+      "h": 145,
+      "tileable": false,
+      "note": "reference swatch cropped from the sheet (not guaranteed seamless)"
+    },
+    "fabric_gray_swatch": {
+      "file": "textures/swatches_from_sheet/fabric_gray_swatch.png",
+      "w": 145,
+      "h": 145,
+      "tileable": false,
+      "note": "reference swatch cropped from the sheet (not guaranteed seamless)"
+    },
+    "wood_oak_swatch": {
+      "file": "textures/swatches_from_sheet/wood_oak_swatch.png",
+      "w": 145,
+      "h": 145,
+      "tileable": false,
+      "note": "reference swatch cropped from the sheet (not guaranteed seamless)"
+    },
+    "wood_walnut_swatch": {
+      "file": "textures/swatches_from_sheet/wood_walnut_swatch.png",
+      "w": 155,
+      "h": 145,
+      "tileable": false,
+      "note": "reference swatch cropped from the sheet (not guaranteed seamless)"
+    }
+  }
+}

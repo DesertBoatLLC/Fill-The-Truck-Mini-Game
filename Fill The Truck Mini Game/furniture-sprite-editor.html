@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furniture Sprite Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #ff6b35;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Left Panel - Item List */
+        .item-list-panel {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+
+        .item-list-panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ff6b35;
+        }
+
+        .item-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .item-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .item-card.selected {
+            border-color: #ff6b35;
+            background: rgba(255, 107, 53, 0.15);
+        }
+
+        .item-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-preview {
+            width: 50px;
+            height: 50px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .item-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .item-preview canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-info h3 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .item-info span {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .sprite-badge {
+            background: #4CAF50;
+            color: white;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+
+        /* Center Panel - Preview */
+        .preview-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-panel h2 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #ff6b35;
+            align-self: flex-start;
+        }
+
+        .preview-container {
+            background: #f0f0f0;
+            border-radius: 12px;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-container canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .preview-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+        }
+
+        .size-indicator {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .comparison-section {
+            margin-top: 30px;
+            width: 100%;
+        }
+
+        .comparison-section h3 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+
+        .comparison-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .comparison-box {
+            text-align: center;
+        }
+
+        .comparison-box canvas {
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .comparison-box p {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        /* Right Panel - Controls */
+        .controls-panel {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: calc(100vh - 150px);
+            overflow-y: auto;
+        }
+
+        .controls-panel h2 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #ff6b35;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ff6b35;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .value-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .texture-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .texture-option {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+
+        .texture-option:hover {
+            transform: scale(1.05);
+        }
+
+        .texture-option.selected {
+            border-color: #ff6b35;
+        }
+
+        .texture-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .sprite-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .sprite-option {
+            aspect-ratio: 1;
+            background: #f0f0f0;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+        }
+
+        .sprite-option:hover {
+            transform: scale(1.05);
+        }
+
+        .sprite-option.selected {
+            border-color: #ff6b35;
+        }
+
+        .sprite-option.none {
+            background: rgba(255, 255, 255, 0.1);
+            color: #666;
+            font-size: 11px;
+        }
+
+        .sprite-option img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e55a2b;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .code-output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #4CAF50;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🪑 Furniture Sprite Editor</h1>
+        <p>Adjust textures, sprites, and sizes for game items. Changes can be exported to update game.js</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel - Item List -->
+        <div class="item-list-panel">
+            <h2>📦 Furniture Items</h2>
+            <div id="itemList"></div>
+        </div>
+
+        <!-- Center Panel - Preview -->
+        <div class="preview-panel">
+            <h2>👁️ Live Preview</h2>
+            <div class="preview-container">
+                <div class="preview-grid"></div>
+                <canvas id="previewCanvas" width="300" height="300"></canvas>
+            </div>
+            <div class="size-indicator" id="sizeIndicator">Select an item to preview</div>
+
+            <div class="comparison-section">
+                <h3>Size Comparison (In-Game Scale)</h3>
+                <div class="comparison-container">
+                    <div class="comparison-box">
+                        <canvas id="compareCanvas1" width="150" height="150"></canvas>
+                        <p>Current Item</p>
+                    </div>
+                    <div class="comparison-box">
+                        <canvas id="compareCanvas2" width="150" height="150"></canvas>
+                        <p>Reference (Sofa)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Controls -->
+        <div class="controls-panel">
+            <h2>⚙️ Item Settings</h2>
+
+            <div class="control-section">
+                <h3>Dimensions</h3>
+                <div class="control-group">
+                    <label>Width (px)</label>
+                    <div class="control-row">
+                        <input type="range" id="widthSlider" min="20" max="200" value="60">
+                        <span class="value-display" id="widthValue">60</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Height (px)</label>
+                    <div class="control-row">
+                        <input type="range" id="heightSlider" min="20" max="200" value="60">
+                        <span class="value-display" id="heightValue">60</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>Physics</h3>
+                <div class="control-group">
+                    <label>Density (weight)</label>
+                    <div class="control-row">
+                        <input type="range" id="densitySlider" min="0.0005" max="0.005" step="0.0001" value="0.001">
+                        <span class="value-display" id="densityValue">0.001</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>Sprite Image</h3>
+                <div class="sprite-grid" id="spriteGrid"></div>
+            </div>
+
+            <div class="control-section">
+                <h3>Fallback Texture</h3>
+                <div class="texture-grid" id="textureGrid"></div>
+            </div>
+
+            <div class="control-section">
+                <h3>Actions</h3>
+                <button class="btn btn-primary" onclick="applyChanges()">Apply Changes</button>
+                <button class="btn btn-secondary" onclick="resetItem()">Reset to Default</button>
+                <button class="btn btn-success" onclick="exportConfig()">Export Configuration</button>
+            </div>
+
+            <div class="control-section">
+                <h3>Generated Code</h3>
+                <div class="code-output" id="codeOutput">// Select an item to see its configuration</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Changes applied!</div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const FURNITURE_ITEMS = [
+            { type: 'rect', width: 75, height: 120, name: 'Fridge', density: 0.003, color: '#E8E8E8', texture: 'metal' },
+            { type: 'rect', width: 70, height: 85, name: 'Washer', density: 0.003, color: '#F5F5F5', texture: 'metal' },
+            { type: 'rect', width: 70, height: 85, name: 'Dryer', density: 0.003, color: '#FFFFFF', texture: 'metal' },
+            { type: 'rect', width: 120, height: 45, name: 'Sofa', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'couch' },
+            { type: 'rect', width: 75, height: 55, name: 'Loveseat', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'loveseat' },
+            { type: 'rect', width: 55, height: 55, name: 'Armchair', density: 0.0012, color: '#D4B896', texture: 'fabric_tan', sprite: 'armchair' },
+            { type: 'rect', width: 40, height: 45, name: 'Ottoman', density: 0.001, color: '#D4B896', texture: 'fabric_tan', sprite: 'ottoman' },
+            { type: 'rect', width: 35, height: 55, name: 'Dining Chair', density: 0.001, color: '#B8956E', texture: 'wood_oak', sprite: 'dining_chair' },
+            { type: 'rect', width: 60, height: 60, name: 'Nightstand', density: 0.0025, color: '#B8956E', texture: 'wood_oak' },
+            { type: 'rect', width: 140, height: 80, name: 'Vanity Dresser', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
+            { type: 'rect', width: 60, height: 120, name: 'Tall Chest', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
+            { type: 'ellipse', width: 100, height: 60, name: 'Kitchen Table', density: 0.0025, color: '#B8956E', texture: 'wood_oak' },
+            { type: 'rect', width: 55, height: 40, name: 'Toolbox', density: 0.0025, color: '#CC0000', texture: 'metal' },
+            { type: 'rect', width: 30, height: 30, name: 'Medium Box', density: 0.001, color: '#D2B48C', texture: 'cardboard' },
+            { type: 'rect', width: 20, height: 20, name: 'Small Box', density: 0.0008, color: '#C19A6B', texture: 'cardboard' },
+            { type: 'rect', width: 60, height: 60, name: 'Large Box', density: 0.0012, color: '#DEB887', texture: 'cardboard' }
+        ];
+
+        const TEXTURES = {
+            metal: { name: 'Metal', path: 'metal-texture.png', color: '#E8E8E8' },
+            wood: { name: 'Wood', path: 'wood-texture.png', color: '#8B7355' },
+            wood_oak: { name: 'Oak', path: 'fill_the_truck_assets_individual/textures/wood_oak_tile.png', color: '#B8956E' },
+            wood_walnut: { name: 'Walnut', path: 'fill_the_truck_assets_individual/textures/wood_walnut_tile.png', color: '#8B6B4D' },
+            fabric: { name: 'Fabric', path: 'fabric-texture.png', color: '#8B4513' },
+            fabric_tan: { name: 'Tan Fabric', path: 'fill_the_truck_assets_individual/textures/fabric_tan_tile.png', color: '#D4B896' },
+            fabric_gray: { name: 'Gray Fabric', path: 'fill_the_truck_assets_individual/textures/fabric_gray_tile.png', color: '#9E9E9E' },
+            cardboard: { name: 'Cardboard', path: 'cardboard-texture.png', color: '#D2B48C' }
+        };
+
+        const SPRITES = {
+            couch: { name: 'Couch', path: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png' },
+            loveseat: { name: 'Loveseat', path: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png' },
+            armchair: { name: 'Armchair', path: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png' },
+            ottoman: { name: 'Ottoman', path: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png' },
+            dining_chair: { name: 'Dining Chair', path: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png' }
+        };
+
+        // ==================== STATE ====================
+        let selectedIndex = -1;
+        let editedItems = JSON.parse(JSON.stringify(FURNITURE_ITEMS)); // Deep copy
+        let loadedTextures = {};
+        let loadedSprites = {};
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            await loadAllAssets();
+            renderItemList();
+            renderTextureGrid();
+            renderSpriteGrid();
+            setupEventListeners();
+
+            // Select first item by default
+            selectItem(0);
+        }
+
+        async function loadAllAssets() {
+            // Load textures
+            for (let key in TEXTURES) {
+                const img = new Image();
+                img.src = TEXTURES[key].path;
+                try {
+                    await img.decode();
+                    loadedTextures[key] = img;
+                } catch (e) {
+                    console.warn(`Failed to load texture: ${key}`);
+                }
+            }
+
+            // Load sprites
+            for (let key in SPRITES) {
+                const img = new Image();
+                img.src = SPRITES[key].path;
+                try {
+                    await img.decode();
+                    loadedSprites[key] = img;
+                } catch (e) {
+                    console.warn(`Failed to load sprite: ${key}`);
+                }
+            }
+        }
+
+        // ==================== RENDERING ====================
+        function renderItemList() {
+            const container = document.getElementById('itemList');
+            container.innerHTML = '';
+
+            editedItems.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = `item-card ${index === selectedIndex ? 'selected' : ''}`;
+                card.onclick = () => selectItem(index);
+
+                const hasSprite = item.sprite && loadedSprites[item.sprite];
+
+                card.innerHTML = `
+                    <div class="item-card-header">
+                        <div class="item-preview">
+                            <canvas id="itemPreview${index}" width="50" height="50"></canvas>
+                        </div>
+                        <div class="item-info">
+                            <h3>${item.name}${hasSprite ? '<span class="sprite-badge">SPRITE</span>' : ''}</h3>
+                            <span>${item.width}×${item.height}px • ${item.texture}</span>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+
+                // Draw preview
+                setTimeout(() => {
+                    const canvas = document.getElementById(`itemPreview${index}`);
+                    if (canvas) drawItemPreview(canvas, item, 40);
+                }, 10);
+            });
+        }
+
+        function renderTextureGrid() {
+            const container = document.getElementById('textureGrid');
+            container.innerHTML = '';
+
+            for (let key in TEXTURES) {
+                const div = document.createElement('div');
+                div.className = 'texture-option';
+                div.dataset.texture = key;
+                div.title = TEXTURES[key].name;
+                div.onclick = () => selectTexture(key);
+
+                if (loadedTextures[key]) {
+                    const img = document.createElement('img');
+                    img.src = TEXTURES[key].path;
+                    div.appendChild(img);
+                } else {
+                    div.style.background = TEXTURES[key].color;
+                }
+
+                container.appendChild(div);
+            }
+        }
+
+        function renderSpriteGrid() {
+            const container = document.getElementById('spriteGrid');
+            container.innerHTML = '';
+
+            // Add "None" option
+            const noneDiv = document.createElement('div');
+            noneDiv.className = 'sprite-option none';
+            noneDiv.dataset.sprite = '';
+            noneDiv.onclick = () => selectSprite('');
+            noneDiv.textContent = 'None';
+            container.appendChild(noneDiv);
+
+            for (let key in SPRITES) {
+                const div = document.createElement('div');
+                div.className = 'sprite-option';
+                div.dataset.sprite = key;
+                div.title = SPRITES[key].name;
+                div.onclick = () => selectSprite(key);
+
+                if (loadedSprites[key]) {
+                    const img = document.createElement('img');
+                    img.src = SPRITES[key].path;
+                    div.appendChild(img);
+                } else {
+                    div.textContent = key;
+                }
+
+                container.appendChild(div);
+            }
+        }
+
+        function drawItemPreview(canvas, item, maxSize) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const scale = Math.min(maxSize / item.width, maxSize / item.height, 1);
+            const w = item.width * scale;
+            const h = item.height * scale;
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+
+            ctx.save();
+            ctx.translate(x + w/2, y + h/2);
+
+            // Draw sprite if available
+            if (item.sprite && loadedSprites[item.sprite]) {
+                ctx.drawImage(loadedSprites[item.sprite], -w/2, -h/2, w, h);
+            } else {
+                // Draw shape with texture/color
+                ctx.beginPath();
+                if (item.type === 'ellipse') {
+                    ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.rect(-w/2, -h/2, w, h);
+                }
+
+                if (loadedTextures[item.texture]) {
+                    const pattern = ctx.createPattern(loadedTextures[item.texture], 'repeat');
+                    ctx.fillStyle = pattern;
+                } else {
+                    ctx.fillStyle = item.color || TEXTURES[item.texture]?.color || '#999';
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function updateMainPreview() {
+            if (selectedIndex < 0) return;
+
+            const item = editedItems[selectedIndex];
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Calculate scale to fit in preview
+            const maxSize = 250;
+            const scale = Math.min(maxSize / item.width, maxSize / item.height, 2);
+            const w = item.width * scale;
+            const h = item.height * scale;
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            // Draw sprite if available
+            if (item.sprite && loadedSprites[item.sprite]) {
+                ctx.drawImage(loadedSprites[item.sprite], -w/2, -h/2, w, h);
+            } else {
+                // Draw shape with texture/color
+                ctx.beginPath();
+                if (item.type === 'ellipse') {
+                    ctx.ellipse(0, 0, w/2, h/2, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.rect(-w/2, -h/2, w, h);
+                }
+
+                if (loadedTextures[item.texture]) {
+                    const pattern = ctx.createPattern(loadedTextures[item.texture], 'repeat');
+                    ctx.fillStyle = pattern;
+                } else {
+                    ctx.fillStyle = item.color || '#999';
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Update size indicator
+            document.getElementById('sizeIndicator').textContent =
+                `${item.name}: ${item.width}×${item.height}px (Density: ${item.density})`;
+
+            // Update comparison canvases
+            updateComparison();
+            updateCodeOutput();
+        }
+
+        function updateComparison() {
+            if (selectedIndex < 0) return;
+
+            const item = editedItems[selectedIndex];
+
+            // Draw current item at game scale
+            const canvas1 = document.getElementById('compareCanvas1');
+            drawItemPreview(canvas1, item, 120);
+
+            // Draw reference sofa
+            const canvas2 = document.getElementById('compareCanvas2');
+            const sofa = editedItems.find(i => i.name === 'Sofa') || editedItems[3];
+            drawItemPreview(canvas2, sofa, 120);
+        }
+
+        function updateCodeOutput() {
+            if (selectedIndex < 0) return;
+
+            const item = editedItems[selectedIndex];
+            let code = `{ type: '${item.type}', width: ${item.width}, height: ${item.height}, name: '${item.name}', density: ${item.density}, color: '${item.color}', texture: '${item.texture}'`;
+
+            if (item.sprite) {
+                code += `, sprite: '${item.sprite}'`;
+            }
+            code += ' }';
+
+            document.getElementById('codeOutput').textContent = code;
+        }
+
+        // ==================== SELECTION & CONTROLS ====================
+        function selectItem(index) {
+            selectedIndex = index;
+            const item = editedItems[index];
+
+            // Update sliders
+            document.getElementById('widthSlider').value = item.width;
+            document.getElementById('widthValue').textContent = item.width;
+            document.getElementById('heightSlider').value = item.height;
+            document.getElementById('heightValue').textContent = item.height;
+            document.getElementById('densitySlider').value = item.density;
+            document.getElementById('densityValue').textContent = item.density;
+
+            // Update texture selection
+            document.querySelectorAll('.texture-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.texture === item.texture);
+            });
+
+            // Update sprite selection
+            document.querySelectorAll('.sprite-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.sprite === (item.sprite || ''));
+            });
+
+            // Update item list selection
+            document.querySelectorAll('.item-card').forEach((el, i) => {
+                el.classList.toggle('selected', i === index);
+            });
+
+            updateMainPreview();
+        }
+
+        function selectTexture(textureKey) {
+            if (selectedIndex < 0) return;
+
+            editedItems[selectedIndex].texture = textureKey;
+            editedItems[selectedIndex].color = TEXTURES[textureKey].color;
+
+            document.querySelectorAll('.texture-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.texture === textureKey);
+            });
+
+            updateMainPreview();
+            renderItemList();
+        }
+
+        function selectSprite(spriteKey) {
+            if (selectedIndex < 0) return;
+
+            if (spriteKey) {
+                editedItems[selectedIndex].sprite = spriteKey;
+            } else {
+                delete editedItems[selectedIndex].sprite;
+            }
+
+            document.querySelectorAll('.sprite-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.sprite === spriteKey);
+            });
+
+            updateMainPreview();
+            renderItemList();
+        }
+
+        function setupEventListeners() {
+            // Width slider
+            document.getElementById('widthSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('widthValue').textContent = value;
+                if (selectedIndex >= 0) {
+                    editedItems[selectedIndex].width = value;
+                    updateMainPreview();
+                    renderItemList();
+                }
+            });
+
+            // Height slider
+            document.getElementById('heightSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('heightValue').textContent = value;
+                if (selectedIndex >= 0) {
+                    editedItems[selectedIndex].height = value;
+                    updateMainPreview();
+                    renderItemList();
+                }
+            });
+
+            // Density slider
+            document.getElementById('densitySlider').addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('densityValue').textContent = value.toFixed(4);
+                if (selectedIndex >= 0) {
+                    editedItems[selectedIndex].density = value;
+                    updateMainPreview();
+                }
+            });
+        }
+
+        // ==================== ACTIONS ====================
+        function applyChanges() {
+            showToast('Changes applied to preview!');
+            renderItemList();
+            updateMainPreview();
+        }
+
+        function resetItem() {
+            if (selectedIndex < 0) return;
+
+            editedItems[selectedIndex] = JSON.parse(JSON.stringify(FURNITURE_ITEMS[selectedIndex]));
+            selectItem(selectedIndex);
+            showToast('Item reset to default');
+        }
+
+        function exportConfig() {
+            let code = 'const FURNITURE_ITEMS = [\n';
+
+            editedItems.forEach((item, index) => {
+                code += '    { ';
+                code += `type: '${item.type}', `;
+                code += `width: ${item.width}, `;
+                code += `height: ${item.height}, `;
+                code += `name: '${item.name}', `;
+                code += `density: ${item.density}, `;
+                code += `color: '${item.color}', `;
+                code += `texture: '${item.texture}'`;
+                if (item.sprite) {
+                    code += `, sprite: '${item.sprite}'`;
+                }
+                code += ' }';
+                if (index < editedItems.length - 1) code += ',';
+                code += '\n';
+            });
+
+            code += '];';
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('Configuration copied to clipboard!');
+            }).catch(() => {
+                // Fallback - show in output
+                document.getElementById('codeOutput').textContent = code;
+                showToast('Code generated - see output below');
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ==================== START ====================
+        init();
+    </script>
+</body>
+</html>

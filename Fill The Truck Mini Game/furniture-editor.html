@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Furniture Items Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .item-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #ddd;
+        }
+
+        .item-card.selected {
+            border-color: #FF6B35;
+            background: #fff5f0;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .item-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .item-texture {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+
+        .item-preview {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .item-preview canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .dimension-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+        }
+
+        .dim-width {
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dim-height {
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .slider-group {
+            margin-bottom: 10px;
+        }
+
+        .slider-group label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            background: #FF6B35;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .export-section {
+            background: #e8f5e9;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid #4caf50;
+        }
+
+        .export-section h2 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #FF6B35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #e55a25;
+        }
+
+        button.secondary {
+            background: #667eea;
+        }
+
+        button.secondary:hover {
+            background: #5568d3;
+        }
+
+        .code-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff3e0;
+            border-radius: 8px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FF6B35;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Furniture Items Editor</h1>
+        <p class="subtitle">Adjust dimensions for all furniture items in the game</p>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="modifiedCount">0</div>
+                <div class="stat-label">Modified</div>
+            </div>
+        </div>
+
+        <div class="items-grid" id="itemsGrid"></div>
+
+        <div class="export-section">
+            <h2>📋 Export Updated Items</h2>
+            <div class="button-group">
+                <button onclick="copyCode()">📋 Copy Code to Clipboard</button>
+                <button class="secondary" onclick="resetAll()">🔄 Reset All to Defaults</button>
+            </div>
+            <div class="code-output" id="codeOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        // Original furniture items from game.js
+        const FURNITURE_ITEMS = [
+            { type: 'rect', width: 80, height: 120, name: 'Fridge', density: 0.003, color: '#E8E8E8', texture: 'metal' },
+            { type: 'rect', width: 70, height: 90, name: 'Washer', density: 0.003, color: '#F5F5F5', texture: 'metal' },
+            { type: 'rect', width: 70, height: 90, name: 'Dryer', density: 0.003, color: '#FFFFFF', texture: 'metal' },
+            { type: 'rect', width: 130, height: 80, name: 'Sofa', density: 0.0015, color: '#8B4513', texture: 'fabric' },
+            { type: 'rect', width: 100, height: 75, name: 'Loveseat', density: 0.0015, color: '#A0522D', texture: 'fabric' },
+            { type: 'rect', width: 60, height: 75, name: 'Nightstand', density: 0.0025, color: '#8B7355', texture: 'wood' },
+            { type: 'rect', width: 140, height: 80, name: 'Vanity Dresser', density: 0.0025, color: '#8B7355', texture: 'wood' },
+            { type: 'rect', width: 60, height: 120, name: 'Tall Chest', density: 0.0025, color: '#654321', texture: 'wood' },
+            { type: 'rect', width: 100, height: 60, name: 'Dresser', density: 0.0025, color: '#A0826D', texture: 'wood' },
+            { type: 'rect', width: 70, height: 50, name: 'Toolbox', density: 0.0025, color: '#CC0000', texture: 'metal' },
+            { type: 'rect', width: 50, height: 50, name: 'Medium Box', density: 0.001, color: '#D2B48C', texture: 'cardboard' },
+            { type: 'rect', width: 40, height: 40, name: 'Small Box', density: 0.0008, color: '#C19A6B', texture: 'cardboard' },
+            { type: 'rect', width: 60, height: 60, name: 'Large Box', density: 0.0012, color: '#DEB887', texture: 'cardboard' }
+        ];
+
+        let items = JSON.parse(JSON.stringify(FURNITURE_ITEMS)); // Deep copy
+        const originalItems = JSON.parse(JSON.stringify(FURNITURE_ITEMS));
+
+        function createItemCard(item, index) {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.id = `item-${index}`;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 130;
+
+            card.innerHTML = `
+                <div class="item-header">
+                    <span class="item-name">${item.name}</span>
+                    <span class="item-texture">${item.texture}</span>
+                </div>
+                <div class="item-preview">
+                    <div class="dimension-label dim-width">${item.width}px</div>
+                    <div class="dimension-label dim-height">${item.height}px</div>
+                </div>
+                <div class="slider-group">
+                    <label>Width:</label>
+                    <div class="slider-container">
+                        <input type="range"
+                               id="width-${index}"
+                               min="20"
+                               max="200"
+                               value="${item.width}"
+                               step="5">
+                        <span class="slider-value" id="width-value-${index}">${item.width}</span>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <label>Height:</label>
+                    <div class="slider-container">
+                        <input type="range"
+                               id="height-${index}"
+                               min="20"
+                               max="200"
+                               value="${item.height}"
+                               step="5">
+                        <span class="slider-value" id="height-value-${index}">${item.height}</span>
+                    </div>
+                </div>
+            `;
+
+            const previewDiv = card.querySelector('.item-preview');
+            previewDiv.insertBefore(canvas, previewDiv.firstChild);
+
+            return { card, canvas };
+        }
+
+        function drawItemPreview(canvas, item) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Scale to fit canvas
+            const scale = Math.min(
+                (canvas.width - 40) / item.width,
+                (canvas.height - 40) / item.height
+            );
+
+            const w = item.width * scale;
+            const h = item.height * scale;
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+
+            // Draw item
+            ctx.fillStyle = item.color;
+            ctx.fillRect(x, y, w, h);
+
+            // Draw border
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+
+            // Add texture indicator
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(item.texture, canvas.width / 2, canvas.height / 2);
+        }
+
+        function setupSliders() {
+            items.forEach((item, index) => {
+                const widthSlider = document.getElementById(`width-${index}`);
+                const heightSlider = document.getElementById(`height-${index}`);
+                const widthValue = document.getElementById(`width-value-${index}`);
+                const heightValue = document.getElementById(`height-value-${index}`);
+                const card = document.getElementById(`item-${index}`);
+
+                widthSlider.addEventListener('input', (e) => {
+                    items[index].width = parseInt(e.target.value);
+                    widthValue.textContent = e.target.value;
+                    card.querySelector('.dim-width').textContent = e.target.value + 'px';
+
+                    const canvas = card.querySelector('canvas');
+                    drawItemPreview(canvas, items[index]);
+                    updateExport();
+                    updateModifiedCount();
+
+                    if (hasChanged(index)) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                });
+
+                heightSlider.addEventListener('input', (e) => {
+                    items[index].height = parseInt(e.target.value);
+                    heightValue.textContent = e.target.value;
+                    card.querySelector('.dim-height').textContent = e.target.value + 'px';
+
+                    const canvas = card.querySelector('canvas');
+                    drawItemPreview(canvas, items[index]);
+                    updateExport();
+                    updateModifiedCount();
+
+                    if (hasChanged(index)) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                });
+            });
+        }
+
+        function hasChanged(index) {
+            return items[index].width !== originalItems[index].width ||
+                   items[index].height !== originalItems[index].height;
+        }
+
+        function updateModifiedCount() {
+            const count = items.filter((item, index) => hasChanged(index)).length;
+            document.getElementById('modifiedCount').textContent = count;
+        }
+
+        function renderItems() {
+            const grid = document.getElementById('itemsGrid');
+            grid.innerHTML = '';
+
+            items.forEach((item, index) => {
+                const { card, canvas } = createItemCard(item, index);
+                grid.appendChild(card);
+                drawItemPreview(canvas, item);
+            });
+
+            document.getElementById('totalItems').textContent = items.length;
+            setupSliders();
+            updateExport();
+        }
+
+        function updateExport() {
+            const code = `// ===== FURNITURE_ITEMS ARRAY =====
+// Replace the FURNITURE_ITEMS array in game.js (around line 11-38)
+
+const FURNITURE_ITEMS = [
+${items.map(item => `    { type: '${item.type}', width: ${item.width}, height: ${item.height}, name: '${item.name}', density: ${item.density}, color: '${item.color}', texture: '${item.texture}' }`).join(',\n')}
+];
+
+// ===== MODIFIED ITEMS =====
+${items.filter((item, index) => hasChanged(index)).map((item, originalIndex) => {
+    const index = items.indexOf(item);
+    const orig = originalItems[index];
+    return `// ${item.name}: ${orig.width}x${orig.height} → ${item.width}x${item.height}`;
+}).join('\n') || '// No items modified yet'}`;
+
+            document.getElementById('codeOutput').textContent = code;
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ Code copied to clipboard!\n\nPaste this into game.js to replace the FURNITURE_ITEMS array.');
+            });
+        }
+
+        function resetAll() {
+            if (confirm('Reset all items to original dimensions?')) {
+                items = JSON.parse(JSON.stringify(originalItems));
+                renderItems();
+                updateModifiedCount();
+            }
+        }
+
+        // Initialize
+        renderItems();
+    </script>
+</body>
+</html>

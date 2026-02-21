@@ -1,0 +1,73 @@
+{
+  "version": "sheet-export-v1",
+  "source_sheet": "sprite_sheet_reference.png",
+  "sprites": {
+    "couch_upholstered_tan": {
+      "sheet_box": [
+        35,
+        175,
+        545,
+        475
+      ],
+      "path": "sprites/couch_upholstered_tan.png",
+      "w": 510,
+      "h": 300
+    },
+    "loveseat_upholstered_tan": {
+      "sheet_box": [
+        555,
+        190,
+        855,
+        475
+      ],
+      "path": "sprites/loveseat_upholstered_tan.png",
+      "w": 300,
+      "h": 285
+    },
+    "armchair_upholstered_tan": {
+      "sheet_box": [
+        80,
+        515,
+        365,
+        815
+      ],
+      "path": "sprites/armchair_upholstered_tan.png",
+      "w": 285,
+      "h": 300
+    },
+    "ottoman_upholstered_tan": {
+      "sheet_box": [
+        410,
+        545,
+        625,
+        815
+      ],
+      "path": "sprites/ottoman_upholstered_tan.png",
+      "w": 215,
+      "h": 270
+    },
+    "dining_chair_wood_oak": {
+      "sheet_box": [
+        690,
+        495,
+        955,
+        845
+      ],
+      "path": "sprites/dining_chair_wood_oak.png",
+      "w": 265,
+      "h": 350
+    }
+  },
+  "tileable_textures": [
+    "textures/fabric_tan_tile.png",
+    "textures/fabric_gray_tile.png",
+    "textures/wood_oak_tile.png",
+    "textures/wood_walnut_tile.png"
+  ],
+  "sheet_texture_swatches": [
+    "textures/fabric_tan_sheet.png",
+    "textures/fabric_gray_sheet.png",
+    "textures/wood_oak_sheet.png",
+    "textures/wood_walnut_sheet.png"
+  ]
+}

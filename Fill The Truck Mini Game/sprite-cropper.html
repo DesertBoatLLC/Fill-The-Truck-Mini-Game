@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Cropper Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #4CAF50;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Left Panel */
+        .sprite-list-panel {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .sprite-list-panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+
+        .sprite-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .sprite-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .sprite-card.selected {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.15);
+        }
+
+        .sprite-card h3 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .sprite-card span {
+            font-size: 11px;
+            color: #888;
+        }
+
+        .sprite-card.has-crop span {
+            color: #4CAF50;
+        }
+
+        .upload-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .upload-section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
+            color: #4CAF50;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Center Panel - Cropper */
+        .cropper-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .cropper-panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        #cropCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .crop-overlay {
+            position: absolute;
+            border: 2px dashed #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            pointer-events: none;
+            display: none;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .instructions strong {
+            color: #4CAF50;
+        }
+
+        /* Right Panel - Preview & Controls */
+        .controls-panel {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .controls-panel h2 {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        .preview-section {
+            margin-bottom: 25px;
+        }
+
+        .preview-section h3 {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preview-box {
+            background: #f0f0f0;
+            border-radius: 8px;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #previewCanvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .crop-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 6px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-row input {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .btn-export {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #1976D2;
+        }
+
+        .code-output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #4CAF50;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 15px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .game-preview {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .game-preview h3 {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .game-preview-box {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .game-item {
+            text-align: center;
+        }
+
+        .game-item canvas {
+            border: 1px solid #ccc;
+        }
+
+        .game-item p {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .zoom-controls span {
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✂️ Sprite Cropper Tool</h1>
+        <p>Click and drag to select crop region. Use this for sprites with extra elements that need trimming.</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel - Sprite List -->
+        <div class="sprite-list-panel">
+            <h2>📁 Sprites</h2>
+            <div id="spriteList"></div>
+
+            <div class="upload-section">
+                <h3>Add New Sprite</h3>
+                <input type="file" id="fileInput" accept="image/*">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    📤 Upload Image
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Panel - Cropper -->
+        <div class="cropper-panel">
+            <h2>🖼️ Crop Area</h2>
+
+            <div class="zoom-controls">
+                <span>Zoom:</span>
+                <button class="zoom-btn" onclick="changeZoom(-0.25)">−</button>
+                <span id="zoomLevel">100%</span>
+                <button class="zoom-btn" onclick="changeZoom(0.25)">+</button>
+                <button class="btn btn-secondary" style="width: auto; margin: 0; padding: 8px 16px;" onclick="resetZoom()">Reset</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="cropCanvas" width="600" height="400"></canvas>
+            </div>
+
+            <div class="instructions">
+                <strong>Instructions:</strong> Click and drag on the image to select the crop region.
+                The green dashed box shows your selection. Use zoom controls for precision.
+                <br><br>
+                <strong>Tip:</strong> For furniture sprites, crop to include only the main item, excluding any extra arms or duplicate pieces.
+            </div>
+        </div>
+
+        <!-- Right Panel - Preview & Controls -->
+        <div class="controls-panel">
+            <h2>⚙️ Crop Settings</h2>
+
+            <div class="preview-section">
+                <h3>Cropped Preview</h3>
+                <div class="preview-box">
+                    <canvas id="previewCanvas" width="200" height="200"></canvas>
+                </div>
+                <div class="crop-info" id="cropInfo">No crop selected</div>
+            </div>
+
+            <div class="control-group">
+                <label>Manual Crop Coordinates</label>
+                <div class="control-row">
+                    <input type="number" id="cropX" placeholder="X" min="0">
+                    <input type="number" id="cropY" placeholder="Y" min="0">
+                </div>
+                <div class="control-row" style="margin-top: 8px;">
+                    <input type="number" id="cropW" placeholder="Width" min="1">
+                    <input type="number" id="cropH" placeholder="Height" min="1">
+                </div>
+            </div>
+
+            <button class="btn btn-secondary" onclick="applyCropFromInputs()">Apply Manual Crop</button>
+            <button class="btn btn-primary" onclick="saveCrop()">💾 Save Crop Region</button>
+            <button class="btn btn-danger" onclick="clearCrop()">🗑️ Clear Crop</button>
+            <button class="btn btn-export" onclick="exportCroppedImage()">📥 Export Cropped Image</button>
+
+            <div class="game-preview">
+                <h3>In-Game Size Preview</h3>
+                <div class="game-preview-box">
+                    <div class="game-item">
+                        <canvas id="gamePreview" width="120" height="60"></canvas>
+                        <p>Game Scale</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-output" id="codeOutput">// Select a sprite and define crop region</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Saved!</div>
+
+    <script>
+        // ==================== SPRITE DATA ====================
+        const SPRITES = [
+            {
+                id: 'couch',
+                name: 'Couch',
+                path: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png',
+                gameWidth: 145,
+                gameHeight: 65
+            },
+            {
+                id: 'loveseat',
+                name: 'Loveseat',
+                path: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
+                gameWidth: 110,
+                gameHeight: 65
+            },
+            {
+                id: 'armchair',
+                name: 'Armchair',
+                path: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png',
+                gameWidth: 65,
+                gameHeight: 65
+            },
+            {
+                id: 'ottoman',
+                name: 'Ottoman',
+                path: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
+                gameWidth: 60,
+                gameHeight: 60
+            },
+            {
+                id: 'dining_chair',
+                name: 'Dining Chair',
+                path: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
+                gameWidth: 40,
+                gameHeight: 75
+            },
+            {
+                id: 'tote_yellow',
+                name: 'Storage Tote',
+                path: 'fill_the_truck_sheet_assets/sprites/Tote_Plastic_Yellow-top.png',
+                gameWidth: 55,
+                gameHeight: 40
+            }
+        ];
+
+        // ==================== STATE ====================
+        let selectedSprite = null;
+        let loadedImages = {};
+        let cropRegions = {}; // Saved crop regions per sprite
+        let currentCrop = null; // { x, y, w, h }
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let zoom = 1;
+
+        const cropCanvas = document.getElementById('cropCanvas');
+        const cropCtx = cropCanvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            // Load all sprite images
+            for (let sprite of SPRITES) {
+                const img = new Image();
+                img.src = sprite.path;
+                try {
+                    await img.decode();
+                    loadedImages[sprite.id] = img;
+                } catch (e) {
+                    console.warn(`Failed to load: ${sprite.path}`);
+                }
+            }
+
+            // Load saved crop regions from localStorage
+            const saved = localStorage.getItem('spriteCropRegions');
+            if (saved) {
+                cropRegions = JSON.parse(saved);
+            }
+
+            renderSpriteList();
+            setupCanvasEvents();
+            setupInputEvents();
+
+            // Select first sprite
+            if (SPRITES.length > 0) {
+                selectSprite(SPRITES[0].id);
+            }
+        }
+
+        function renderSpriteList() {
+            const container = document.getElementById('spriteList');
+            container.innerHTML = '';
+
+            SPRITES.forEach(sprite => {
+                const card = document.createElement('div');
+                const hasCrop = cropRegions[sprite.id] != null;
+                card.className = `sprite-card ${selectedSprite?.id === sprite.id ? 'selected' : ''} ${hasCrop ? 'has-crop' : ''}`;
+                card.onclick = () => selectSprite(sprite.id);
+
+                card.innerHTML = `
+                    <h3>${sprite.name}</h3>
+                    <span>${hasCrop ? '✓ Crop defined' : 'No crop'}</span>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function selectSprite(spriteId) {
+            selectedSprite = SPRITES.find(s => s.id === spriteId);
+            currentCrop = cropRegions[spriteId] ? { ...cropRegions[spriteId] } : null;
+
+            renderSpriteList();
+            drawCropCanvas();
+            updatePreview();
+            updateCropInputs();
+            updateCodeOutput();
+        }
+
+        // ==================== CANVAS DRAWING ====================
+        function drawCropCanvas() {
+            if (!selectedSprite || !loadedImages[selectedSprite.id]) {
+                cropCtx.fillStyle = '#ddd';
+                cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+                cropCtx.fillStyle = '#999';
+                cropCtx.font = '16px sans-serif';
+                cropCtx.textAlign = 'center';
+                cropCtx.fillText('No image loaded', cropCanvas.width/2, cropCanvas.height/2);
+                return;
+            }
+
+            const img = loadedImages[selectedSprite.id];
+
+            // Resize canvas to fit image with zoom
+            cropCanvas.width = img.width * zoom;
+            cropCanvas.height = img.height * zoom;
+
+            // Draw checkerboard background (transparency indicator)
+            const tileSize = 10;
+            for (let y = 0; y < cropCanvas.height; y += tileSize) {
+                for (let x = 0; x < cropCanvas.width; x += tileSize) {
+                    cropCtx.fillStyle = ((x + y) / tileSize) % 2 === 0 ? '#fff' : '#eee';
+                    cropCtx.fillRect(x, y, tileSize, tileSize);
+                }
+            }
+
+            // Draw image
+            cropCtx.drawImage(img, 0, 0, cropCanvas.width, cropCanvas.height);
+
+            // Draw crop region if exists
+            if (currentCrop) {
+                // Dim area outside crop
+                cropCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+
+                // Top
+                cropCtx.fillRect(0, 0, cropCanvas.width, currentCrop.y * zoom);
+                // Bottom
+                cropCtx.fillRect(0, (currentCrop.y + currentCrop.h) * zoom, cropCanvas.width, cropCanvas.height);
+                // Left
+                cropCtx.fillRect(0, currentCrop.y * zoom, currentCrop.x * zoom, currentCrop.h * zoom);
+                // Right
+                cropCtx.fillRect((currentCrop.x + currentCrop.w) * zoom, currentCrop.y * zoom, cropCanvas.width, currentCrop.h * zoom);
+
+                // Draw crop border
+                cropCtx.strokeStyle = '#4CAF50';
+                cropCtx.lineWidth = 2;
+                cropCtx.setLineDash([5, 5]);
+                cropCtx.strokeRect(
+                    currentCrop.x * zoom,
+                    currentCrop.y * zoom,
+                    currentCrop.w * zoom,
+                    currentCrop.h * zoom
+                );
+                cropCtx.setLineDash([]);
+
+                // Draw corner handles
+                const handleSize = 8;
+                cropCtx.fillStyle = '#4CAF50';
+                const corners = [
+                    [currentCrop.x * zoom, currentCrop.y * zoom],
+                    [(currentCrop.x + currentCrop.w) * zoom, currentCrop.y * zoom],
+                    [currentCrop.x * zoom, (currentCrop.y + currentCrop.h) * zoom],
+                    [(currentCrop.x + currentCrop.w) * zoom, (currentCrop.y + currentCrop.h) * zoom]
+                ];
+                corners.forEach(([cx, cy]) => {
+                    cropCtx.fillRect(cx - handleSize/2, cy - handleSize/2, handleSize, handleSize);
+                });
+            }
+        }
+
+        function updatePreview() {
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+            if (!selectedSprite || !loadedImages[selectedSprite.id]) {
+                document.getElementById('cropInfo').textContent = 'No image loaded';
+                return;
+            }
+
+            const img = loadedImages[selectedSprite.id];
+
+            if (currentCrop && currentCrop.w > 0 && currentCrop.h > 0) {
+                // Draw cropped region
+                const scale = Math.min(
+                    previewCanvas.width / currentCrop.w,
+                    previewCanvas.height / currentCrop.h,
+                    2
+                );
+                const w = currentCrop.w * scale;
+                const h = currentCrop.h * scale;
+                const x = (previewCanvas.width - w) / 2;
+                const y = (previewCanvas.height - h) / 2;
+
+                previewCtx.drawImage(
+                    img,
+                    currentCrop.x, currentCrop.y, currentCrop.w, currentCrop.h,
+                    x, y, w, h
+                );
+
+                document.getElementById('cropInfo').textContent =
+                    `Crop: ${currentCrop.x}, ${currentCrop.y} → ${currentCrop.w}×${currentCrop.h}px`;
+            } else {
+                // Draw full image
+                const scale = Math.min(
+                    previewCanvas.width / img.width,
+                    previewCanvas.height / img.height,
+                    1
+                );
+                const w = img.width * scale;
+                const h = img.height * scale;
+                const x = (previewCanvas.width - w) / 2;
+                const y = (previewCanvas.height - h) / 2;
+
+                previewCtx.drawImage(img, x, y, w, h);
+                document.getElementById('cropInfo').textContent = `Full image: ${img.width}×${img.height}px`;
+            }
+
+            // Update game preview
+            updateGamePreview();
+        }
+
+        function updateGamePreview() {
+            const gameCanvas = document.getElementById('gamePreview');
+            const gameCtx = gameCanvas.getContext('2d');
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            if (!selectedSprite || !loadedImages[selectedSprite.id]) return;
+
+            const img = loadedImages[selectedSprite.id];
+            const gw = selectedSprite.gameWidth;
+            const gh = selectedSprite.gameHeight;
+
+            // Center in canvas
+            const x = (gameCanvas.width - gw) / 2;
+            const y = (gameCanvas.height - gh) / 2;
+
+            if (currentCrop && currentCrop.w > 0 && currentCrop.h > 0) {
+                gameCtx.drawImage(
+                    img,
+                    currentCrop.x, currentCrop.y, currentCrop.w, currentCrop.h,
+                    x, y, gw, gh
+                );
+            } else {
+                gameCtx.drawImage(img, x, y, gw, gh);
+            }
+        }
+
+        // ==================== CANVAS EVENTS ====================
+        function setupCanvasEvents() {
+            cropCanvas.addEventListener('mousedown', (e) => {
+                if (!selectedSprite) return;
+                isDragging = true;
+                const rect = cropCanvas.getBoundingClientRect();
+                dragStart = {
+                    x: Math.round((e.clientX - rect.left) / zoom),
+                    y: Math.round((e.clientY - rect.top) / zoom)
+                };
+                currentCrop = { x: dragStart.x, y: dragStart.y, w: 0, h: 0 };
+            });
+
+            cropCanvas.addEventListener('mousemove', (e) => {
+                if (!isDragging || !selectedSprite) return;
+
+                const rect = cropCanvas.getBoundingClientRect();
+                const mouseX = Math.round((e.clientX - rect.left) / zoom);
+                const mouseY = Math.round((e.clientY - rect.top) / zoom);
+
+                const img = loadedImages[selectedSprite.id];
+
+                // Calculate crop region
+                let x = Math.min(dragStart.x, mouseX);
+                let y = Math.min(dragStart.y, mouseY);
+                let w = Math.abs(mouseX - dragStart.x);
+                let h = Math.abs(mouseY - dragStart.y);
+
+                // Clamp to image bounds
+                x = Math.max(0, x);
+                y = Math.max(0, y);
+                w = Math.min(w, img.width - x);
+                h = Math.min(h, img.height - y);
+
+                currentCrop = { x, y, w, h };
+                drawCropCanvas();
+                updatePreview();
+                updateCropInputs();
+                updateCodeOutput();
+            });
+
+            cropCanvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            cropCanvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+        }
+
+        function setupInputEvents() {
+            // File upload
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const newId = 'custom_' + Date.now();
+                        const newSprite = {
+                            id: newId,
+                            name: file.name.replace(/\.[^/.]+$/, ''),
+                            path: event.target.result,
+                            gameWidth: 60,
+                            gameHeight: 60
+                        };
+                        SPRITES.push(newSprite);
+                        loadedImages[newId] = img;
+                        renderSpriteList();
+                        selectSprite(newId);
+                        showToast('Image uploaded!');
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateCropInputs() {
+            if (currentCrop) {
+                document.getElementById('cropX').value = currentCrop.x;
+                document.getElementById('cropY').value = currentCrop.y;
+                document.getElementById('cropW').value = currentCrop.w;
+                document.getElementById('cropH').value = currentCrop.h;
+            } else {
+                document.getElementById('cropX').value = '';
+                document.getElementById('cropY').value = '';
+                document.getElementById('cropW').value = '';
+                document.getElementById('cropH').value = '';
+            }
+        }
+
+        function applyCropFromInputs() {
+            const x = parseInt(document.getElementById('cropX').value) || 0;
+            const y = parseInt(document.getElementById('cropY').value) || 0;
+            const w = parseInt(document.getElementById('cropW').value) || 0;
+            const h = parseInt(document.getElementById('cropH').value) || 0;
+
+            if (w > 0 && h > 0) {
+                currentCrop = { x, y, w, h };
+                drawCropCanvas();
+                updatePreview();
+                updateCodeOutput();
+                showToast('Crop applied');
+            }
+        }
+
+        // ==================== ACTIONS ====================
+        function saveCrop() {
+            if (!selectedSprite) return;
+
+            if (currentCrop && currentCrop.w > 0 && currentCrop.h > 0) {
+                cropRegions[selectedSprite.id] = { ...currentCrop };
+                localStorage.setItem('spriteCropRegions', JSON.stringify(cropRegions));
+                renderSpriteList();
+                showToast('Crop region saved!');
+            } else {
+                showToast('No crop region defined');
+            }
+        }
+
+        function clearCrop() {
+            if (!selectedSprite) return;
+
+            currentCrop = null;
+            delete cropRegions[selectedSprite.id];
+            localStorage.setItem('spriteCropRegions', JSON.stringify(cropRegions));
+
+            renderSpriteList();
+            drawCropCanvas();
+            updatePreview();
+            updateCropInputs();
+            updateCodeOutput();
+            showToast('Crop cleared');
+        }
+
+        function exportCroppedImage() {
+            if (!selectedSprite || !loadedImages[selectedSprite.id]) return;
+
+            const img = loadedImages[selectedSprite.id];
+            const exportCanvas = document.createElement('canvas');
+            const exportCtx = exportCanvas.getContext('2d');
+
+            if (currentCrop && currentCrop.w > 0 && currentCrop.h > 0) {
+                exportCanvas.width = currentCrop.w;
+                exportCanvas.height = currentCrop.h;
+                exportCtx.drawImage(
+                    img,
+                    currentCrop.x, currentCrop.y, currentCrop.w, currentCrop.h,
+                    0, 0, currentCrop.w, currentCrop.h
+                );
+            } else {
+                exportCanvas.width = img.width;
+                exportCanvas.height = img.height;
+                exportCtx.drawImage(img, 0, 0);
+            }
+
+            // Download
+            const link = document.createElement('a');
+            link.download = `${selectedSprite.id}_cropped.png`;
+            link.href = exportCanvas.toDataURL('image/png');
+            link.click();
+
+            showToast('Image exported!');
+        }
+
+        function updateCodeOutput() {
+            if (!selectedSprite) {
+                document.getElementById('codeOutput').textContent = '// Select a sprite';
+                return;
+            }
+
+            let code = `// Sprite: ${selectedSprite.name}\n`;
+            code += `// Path: ${selectedSprite.path}\n\n`;
+
+            if (currentCrop && currentCrop.w > 0 && currentCrop.h > 0) {
+                code += `// Crop region for game.js:\n`;
+                code += `spriteCrops: {\n`;
+                code += `    ${selectedSprite.id}: { x: ${currentCrop.x}, y: ${currentCrop.y}, w: ${currentCrop.w}, h: ${currentCrop.h} }\n`;
+                code += `}\n\n`;
+                code += `// Or use exported cropped image directly`;
+            } else {
+                code += `// No crop - using full image`;
+            }
+
+            document.getElementById('codeOutput').textContent = code;
+        }
+
+        function changeZoom(delta) {
+            zoom = Math.max(0.5, Math.min(3, zoom + delta));
+            document.getElementById('zoomLevel').textContent = Math.round(zoom * 100) + '%';
+            drawCropCanvas();
+        }
+
+        function resetZoom() {
+            zoom = 1;
+            document.getElementById('zoomLevel').textContent = '100%';
+            drawCropCanvas();
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // ==================== START ====================
+        init();
+    </script>
+</body>
+</html>

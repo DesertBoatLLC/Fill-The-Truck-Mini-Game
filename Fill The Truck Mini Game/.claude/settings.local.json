@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open:*)",
+      "mcp__Control_Chrome__get_current_tab",
+      "mcp__Control_Chrome__open_url",
+      "mcp__Control_Chrome__execute_javascript",
+      "Bash(node -c:*)",
+      "Bash(echo:*)",
+      "Bash(zip:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}

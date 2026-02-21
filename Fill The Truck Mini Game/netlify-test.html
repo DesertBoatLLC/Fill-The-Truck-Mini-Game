@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill The Truck - Moving Game</title>
+    <style>
+:root {
+    --brand-primary: #FF6B35;
+    --brand-bg: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+    --truck-doors: #FF6B35;
+    --truck-accent: #2C3E50;
+    --truck-wheels: #2C3E50;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--brand-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.game-container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    max-width: 900px;
+    width: 100%;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.header h1 {
+    color: #333;
+    font-size: 2.5em;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.brand-selector {
+    margin-top: 15px;
+    font-size: 0.9em;
+}
+
+.brand-selector label {
+    color: #666;
+    margin-right: 8px;
+}
+
+.brand-selector select {
+    padding: 5px 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.95em;
+}
+
+.brand-selector select:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 25px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 10px;
+}
+
+.info-item {
+    text-align: center;
+}
+
+.info-item .label {
+    display: block;
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.info-item .value {
+    display: block;
+    color: #333;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.game-area {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.truck-container {
+    position: relative;
+}
+
+#gameCanvas {
+    border: 4px solid #333;
+    border-radius: 8px;
+    background: #f0f0f0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.next-piece-container {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    text-align: center;
+    min-width: 150px;
+}
+
+.next-piece-container h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+#nextPieceCanvas {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+}
+
+.controls {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    min-width: 150px;
+}
+
+.controls h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.controls ul {
+    list-style: none;
+}
+
+.controls li {
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+.controls strong {
+    color: #333;
+}
+
+.message {
+    margin-top: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    text-align: center;
+    border-radius: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    display: none;
+    animation: slideIn 0.5s ease;
+}
+
+.message strong {
+    display: block;
+    font-size: 1.4em;
+    margin-bottom: 10px;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.mobile-controls {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.control-btn {
+    background: var(--brand-bg);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 15px 25px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.direction-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .game-area {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .header h1 {
+        font-size: 2em;
+    }
+
+    #gameCanvas {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+
+    .controls {
+        display: none;
+    }
+
+    .mobile-controls {
+        display: block;
+    }
+
+    .next-piece-container {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .game-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.truck-container::before {
+    content: '';
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 20px;
+    background: #333;
+    border-radius: 5px 5px 0 0;
+    border: 3px solid #333;
+}
+
+.truck-container::after {
+    content: '🚚';
+    position: absolute;
+    top: -55px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2em;
+}
+
+.game-over-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.game-over-box {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.game-over-box h2 {
+    font-size: 32px;
+    margin-bottom: 20px;
+    color: #2c5f7c;
+}
+
+.game-over-box .stats {
+    font-size: 18px;
+    margin: 20px 0;
+    color: #333;
+}
+
+.game-over-box .cta-message {
+    font-size: 16px;
+    margin: 20px 0;
+    color: #555;
+    line-height: 1.6;
+}
+
+.replay-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: transform 0.2s;
+}
+
+.replay-btn:hover {
+    transform: scale(1.05);
+}
+
+.countdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+}
+
+.countdown-number {
+    font-size: 120px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    animation: countdown-pulse 1s ease-in-out;
+}
+
+@keyframes countdown-pulse {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🚚 Fill The Truck!</h1>
+            <p class="subtitle">Pack efficiently while we review your request</p>
+            <div class="brand-selector">
+                <label for="brandSelect">Theme: </label>
+                <select id="brandSelect">
+                    <option value="brand1">MoverCo</option>
+                    <option value="brand2">QuickHaul</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="info-item">
+                <span class="label">Space Efficiency:</span>
+                <span class="value" id="efficiency">0%</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Items Packed:</span>
+                <span class="value" id="items">0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Time:</span>
+                <span class="value" id="timer">0s</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="next-piece-container">
+                <h3>Next Item:</h3>
+                <canvas id="nextPieceCanvas" width="120" height="120"></canvas>
+            </div>
+
+            <div class="truck-container">
+                <canvas id="gameCanvas" width="400" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <h3>Controls:</h3>
+                <ul>
+                    <li><strong>←/→</strong> Move</li>
+                    <li><strong>↑</strong> Rotate</li>
+                    <li><strong>↓</strong> or <strong>Space</strong> Drop</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mobile-controls" id="mobileControls">
+            <button class="control-btn" id="rotateBtn">↻ Rotate</button>
+            <div class="direction-controls">
+                <button class="control-btn" id="leftBtn">←</button>
+                <button class="control-btn" id="downBtn">↓</button>
+                <button class="control-btn" id="rightBtn">→</button>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+        <div class="game-over-box">
+            <h2>Truck Full!</h2>
+            <p class="stats">
+                <strong>Final Efficiency:</strong> <span id="finalEfficiency"></span><br>
+                <strong>Items Packed:</strong> <span id="finalItems"></span>
+            </p>
+            <p class="cta-message">
+                Don't try to load the truck yourself, leave that to us.<br>
+                A member of our team will reach out to you shortly.
+            </p>
+            <button class="replay-btn" id="replayBtn">Play Again</button>
+        </div>
+    </div>
+
+    <div class="countdown-overlay" id="countdownOverlay" style="display: none;">
+        <div class="countdown-number" id="countdownNumber">3</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>
+// ==================== CONSTANTS ====================
+const TRUCK_WIDTH = 400;
+const TRUCK_HEIGHT = 600;
+
+const WORLD_GRAVITY = 0.147;
+const DEFAULT_FRICTION = 0.85;
+const DEFAULT_RESTITUTION = 0.03;
+const DEFAULT_DENSITY = 0.001;
+const SLEEP_THRESHOLD = 60;
+
+const FURNITURE_ITEMS = [
+    { type: 'rect', width: 75, height: 120, name: 'Fridge', density: 0.003, color: '#E8E8E8', texture: 'metal' },
+    { type: 'rect', width: 70, height: 85, name: 'Washer', density: 0.003, color: '#F5F5F5', texture: 'metal' },
+    { type: 'rect', width: 70, height: 85, name: 'Dryer', density: 0.003, color: '#FFFFFF', texture: 'metal' },
+    { type: 'rect', width: 145, height: 65, name: 'Sofa', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'couch' },
+    { type: 'rect', width: 110, height: 65, name: 'Loveseat', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'loveseat' },
+    { type: 'rect', width: 65, height: 65, name: 'Armchair', density: 0.0012, color: '#D4B896', texture: 'fabric_tan', sprite: 'armchair' },
+    { type: 'rect', width: 60, height: 60, name: 'Ottoman', density: 0.001, color: '#D4B896', texture: 'fabric_tan', sprite: 'ottoman' },
+    { type: 'rect', width: 40, height: 75, name: 'Dining Chair', density: 0.001, color: '#B8956E', texture: 'wood_oak', sprite: 'dining_chair' },
+    { type: 'rect', width: 60, height: 70, name: 'Nightstand', density: 0.0025, color: '#8B7355', texture: 'wood' },
+    { type: 'rect', width: 140, height: 80, name: 'Vanity Dresser', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
+    { type: 'rect', width: 60, height: 125, name: 'Tall Chest', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
+    { type: 'ellipse', width: 100, height: 100, name: 'Kitchen Table', density: 0.0025, color: '#B8956E', texture: 'wood_oak' },
+    { type: 'rect', width: 68, height: 30, name: 'Toolbox', density: 0.0025, color: '#CC0000', texture: 'metal' },
+    { type: 'rect', width: 45, height: 30, name: 'Medium Box', density: 0.001, color: '#D2B48C', texture: 'cardboard' },
+    { type: 'rect', width: 20, height: 20, name: 'Small Box', density: 0.0008, color: '#C19A6B', texture: 'cardboard' },
+    { type: 'rect', width: 45, height: 45, name: 'Large Box', density: 0.0012, color: '#DEB887', texture: 'cardboard' },
+    { type: 'rect', width: 55, height: 40, name: 'Storage Tote', density: 0.0015, color: '#2D2D2D', texture: 'metal', sprite: 'tote_yellow' }
+];
+
+const BRAND_THEMES = {
+    brand1: {
+        name: "MoverCo",
+        truckColors: { doors: "#FF6B35", accent: "#2C3E50", wheels: "#2C3E50" },
+        background: "linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)",
+        uiAccent: "#FF6B35"
+    },
+    brand2: {
+        name: "QuickHaul",
+        truckColors: { doors: "#2E86AB", accent: "#A23B72", wheels: "#1F4E5F" },
+        background: "linear-gradient(135deg, #2E86AB 0%, #A23B72 100%)",
+        uiAccent: "#2E86AB"
+    }
+};
+
+let currentBrand = 'brand1';
+
+const { Engine, World, Bodies, Body, Events, Sleeping } = Matter;
+let engine, world;
+
+let canvas, ctx, nextCanvas, nextCtx;
+let currentBody = null;
+let nextItem = null;
+let itemsPacked = 0;
+let startTime = Date.now();
+let timerInterval = null;
+let isGameOver = false;
+let lastTimestamp = 0;
+let gameLoop = null;
+let isPlayerControlling = true;
+
+const textureImages = {
+    wood: null, wood_oak: null, wood_walnut: null,
+    metal: null, fabric: null, fabric_tan: null,
+    fabric_gray: null, cardboard: null
+};
+let texturesLoaded = false;
+
+const spriteImages = {
+    couch: null, loveseat: null, armchair: null,
+    ottoman: null, dining_chair: null, tote_yellow: null
+};
+let spritesLoaded = false;
+
+function loadTextures() {
+    const texturePaths = {
+        wood: 'wood-texture.png',
+        wood_oak: 'fill_the_truck_assets_individual/textures/wood_oak_tile.png',
+        wood_walnut: 'fill_the_truck_assets_individual/textures/wood_walnut_tile.png',
+        metal: 'metal-texture.png',
+        fabric: 'fabric-texture.png',
+        fabric_tan: 'fill_the_truck_assets_individual/textures/fabric_tan_tile.png',
+        fabric_gray: 'fill_the_truck_assets_individual/textures/fabric_gray_tile.png',
+        cardboard: 'cardboard-texture.png'
+    };
+
+    let loadedCount = 0;
+    const totalTextures = Object.keys(texturePaths).length;
+
+    for (let type in texturePaths) {
+        const img = new Image();
+        img.onload = () => {
+            textureImages[type] = img;
+            loadedCount++;
+            if (loadedCount === totalTextures) {
+                texturesLoaded = true;
+            }
+        };
+        img.onerror = () => {
+            loadedCount++;
+        };
+        img.src = texturePaths[type];
+    }
+}
+
+function loadSprites() {
+    const spritePaths = {
+        couch: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png',
+        loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
+        armchair: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png',
+        ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
+        dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
+        tote_yellow: 'fill_the_truck_sheet_assets/sprites/Tote_Plastic_Yellow-top.png'
+    };
+
+    let loadedCount = 0;
+    const totalSprites = Object.keys(spritePaths).length;
+
+    for (let type in spritePaths) {
+        const img = new Image();
+        img.onload = () => {
+            spriteImages[type] = img;
+            loadedCount++;
+            if (loadedCount === totalSprites) {
+                spritesLoaded = true;
+            }
+        };
+        img.onerror = () => {
+            loadedCount++;
+        };
+        img.src = spritePaths[type];
+    }
+}
+
+function init() {
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    nextCanvas = document.getElementById('nextPieceCanvas');
+    nextCtx = nextCanvas.getContext('2d');
+
+    canvas.width = TRUCK_WIDTH;
+    canvas.height = TRUCK_HEIGHT;
+
+    loadTextures();
+    loadSprites();
+    initPhysics();
+
+    const brandSelect = document.getElementById('brandSelect');
+    if (brandSelect) {
+        brandSelect.value = currentBrand;
+        brandSelect.addEventListener('change', (e) => {
+            applyBrandTheme(e.target.value);
+        });
+    }
+
+    nextItem = getRandomItem();
+    document.addEventListener('keydown', handleKeyPress);
+    setupMobileControls();
+
+    const replayBtn = document.getElementById('replayBtn');
+    if (replayBtn) {
+        replayBtn.addEventListener('click', restartGame);
+    }
+
+    startCountdown();
+}
+
+function initPhysics() {
+    engine = Engine.create({
+        enableSleeping: true,
+        gravity: { x: 0, y: WORLD_GRAVITY }
+    });
+
+    world = engine.world;
+
+    const floor = Bodies.rectangle(TRUCK_WIDTH / 2, TRUCK_HEIGHT - 70, TRUCK_WIDTH, 20, {
+        isStatic: true, friction: 0.9, label: 'floor'
+    });
+
+    const leftWall = Bodies.rectangle(30, TRUCK_HEIGHT / 2, 20, TRUCK_HEIGHT, {
+        isStatic: true, friction: 0.5, label: 'leftWall'
+    });
+
+    const rightWall = Bodies.rectangle(370, TRUCK_HEIGHT / 2, 20, TRUCK_HEIGHT, {
+        isStatic: true, friction: 0.5, label: 'rightWall'
+    });
+
+    World.add(world, [floor, leftWall, rightWall]);
+}
+
+function getRandomSpawnX(itemWidth) {
+    const minX = 30 + itemWidth / 2 + 10;
+    const maxX = 370 - itemWidth / 2 - 10;
+    return Math.random() * (maxX - minX) + minX;
+}
+
+function createFurnitureBody(furnitureItem) {
+    const { type, width, height, name, density, friction, color, texture } = furnitureItem;
+
+    let body;
+    const spawnX = getRandomSpawnX(width);
+
+    body = Bodies.rectangle(
+        spawnX, -100, width, height,
+        {
+            isStatic: false,
+            friction: friction || DEFAULT_FRICTION,
+            restitution: DEFAULT_RESTITUTION,
+            density: density || DEFAULT_DENSITY,
+            sleepThreshold: SLEEP_THRESHOLD,
+            label: type
+        }
+    );
+
+    body.furnitureData = { type, name, width, height, color, texture, sprite: furnitureItem.sprite };
+
+    World.add(world, body);
+    return body;
+}
+
+function getRandomItem() {
+    return FURNITURE_ITEMS[Math.floor(Math.random() * FURNITURE_ITEMS.length)];
+}
+
+function spawnItem() {
+    if (isGameOver) return;
+
+    const furnitureItem = nextItem;
+    nextItem = getRandomItem();
+
+    currentBody = createFurnitureBody(furnitureItem);
+    isPlayerControlling = true;
+
+    Body.setVelocity(currentBody, { x: 0, y: 1.2 });
+
+    if (window.autoDropTimer) {
+        clearTimeout(window.autoDropTimer);
+    }
+
+    const spawnedBody = currentBody;
+    window.autoDropTimer = setTimeout(() => {
+        if (currentBody === spawnedBody && isPlayerControlling && !isGameOver) {
+            dropItem();
+        }
+    }, 3500);
+
+    drawNextItem();
+
+    if (checkGameOver()) {
+        endGame();
+    }
+}
+
+function checkGameOver() {
+    const stackedBodies = world.bodies.filter(b => !b.isStatic);
+    const TRUCK_INTERIOR_START = 30;
+    const TRUCK_INTERIOR_END = 370;
+    const TRUCK_INTERIOR_WIDTH = TRUCK_INTERIOR_END - TRUCK_INTERIOR_START;
+    const COVERAGE_THRESHOLD = TRUCK_INTERIOR_WIDTH * 0.5;
+
+    const blockedSegments = [];
+
+    for (let body of stackedBodies) {
+        const topY = body.bounds.min.y;
+        const velocity = body.velocity.y;
+
+        if (topY < 0 && Math.abs(velocity) < 0.5) {
+            const leftX = Math.max(body.bounds.min.x, TRUCK_INTERIOR_START);
+            const rightX = Math.min(body.bounds.max.x, TRUCK_INTERIOR_END);
+
+            if (leftX < rightX) {
+                blockedSegments.push({ left: leftX, right: rightX });
+            }
+        }
+    }
+
+    if (blockedSegments.length === 0) return false;
+
+    blockedSegments.sort((a, b) => a.left - b.left);
+
+    const merged = [blockedSegments[0]];
+    for (let i = 1; i < blockedSegments.length; i++) {
+        const current = blockedSegments[i];
+        const last = merged[merged.length - 1];
+
+        if (current.left <= last.right) {
+            last.right = Math.max(last.right, current.right);
+        } else {
+            merged.push(current);
+        }
+    }
+
+    let totalBlockedWidth = 0;
+    for (let segment of merged) {
+        totalBlockedWidth += (segment.right - segment.left);
+    }
+
+    return totalBlockedWidth > COVERAGE_THRESHOLD;
+}
+
+function moveItem(dx) {
+    if (!currentBody || isGameOver) return;
+
+    const currentVelocity = currentBody.velocity;
+    Body.setVelocity(currentBody, {
+        x: dx * 0.35,
+        y: currentVelocity.y
+    });
+}
+
+function rotateItem() {
+    if (!currentBody || isGameOver) return;
+
+    const currentAngle = currentBody.angle;
+    const newAngle = currentAngle + Math.PI / 2;
+
+    Body.setAngle(currentBody, newAngle);
+
+    const bounds = currentBody.bounds;
+    if (bounds.min.x < 30 || bounds.max.x > 370) {
+        Body.setAngle(currentBody, currentAngle);
+    }
+}
+
+function dropItem() {
+    if (!currentBody || isGameOver) return;
+    if (!isPlayerControlling) return;
+
+    if (window.autoDropTimer) {
+        clearTimeout(window.autoDropTimer);
+        window.autoDropTimer = null;
+    }
+
+    Body.setVelocity(currentBody, {
+        x: currentBody.velocity.x,
+        y: 5
+    });
+
+    isPlayerControlling = false;
+    itemsPacked++;
+
+    setTimeout(() => {
+        if (!isGameOver) {
+            spawnItem();
+        }
+    }, 800);
+}
+
+function update(timestamp) {
+    if (isGameOver) return;
+
+    const deltaTime = timestamp - lastTimestamp || 16.67;
+    lastTimestamp = timestamp;
+
+    Engine.update(engine, deltaTime);
+
+    if (checkGameOver()) {
+        endGame();
+        return;
+    }
+
+    updateScore();
+    draw();
+
+    gameLoop = requestAnimationFrame(update);
+}
+
+function handleKeyPress(e) {
+    if (isGameOver) return;
+
+    switch (e.key) {
+        case 'ArrowLeft':
+            moveItem(-10);
+            e.preventDefault();
+            break;
+        case 'ArrowRight':
+            moveItem(10);
+            e.preventDefault();
+            break;
+        case 'ArrowDown':
+        case ' ':
+            dropItem();
+            e.preventDefault();
+            break;
+        case 'ArrowUp':
+            rotateItem();
+            e.preventDefault();
+            break;
+    }
+}
+
+function setupMobileControls() {
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const downBtn = document.getElementById('downBtn');
+    const rotateBtn = document.getElementById('rotateBtn');
+
+    if (leftBtn) {
+        leftBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            moveItem(-10);
+        });
+    }
+
+    if (rightBtn) {
+        rightBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            moveItem(10);
+        });
+    }
+
+    if (downBtn) {
+        downBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            dropItem();
+        });
+    }
+
+    if (rotateBtn) {
+        rotateBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            rotateItem();
+        });
+    }
+}
+
+function createTexture(ctx, type, baseColor, width, height, itemName) {
+    if (texturesLoaded && textureImages[type]) {
+        const img = textureImages[type];
+        let scaleFactor = 1;
+
+        if (type === 'cardboard') {
+            scaleFactor = Math.max(width, height) / 190;
+        } else if (type === 'fabric') {
+            scaleFactor = Math.max(width, height) / 80;
+        } else if (type === 'wood') {
+            scaleFactor = Math.max(width, height) / 150;
+        } else if (type === 'metal') {
+            scaleFactor = Math.max(width, height) / 120;
+        }
+
+        ctx.save();
+        ctx.scale(scaleFactor, scaleFactor);
+
+        const pattern = ctx.createPattern(img, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fill();
+
+        ctx.restore();
+    } else {
+        ctx.fillStyle = baseColor;
+        ctx.fill();
+    }
+
+    // Item-specific details
+    if (itemName === 'Fridge' && type === 'metal') {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -height/2);
+        ctx.lineTo(0, height/2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+        ctx.fillRect(-width/4 - 5, 0, 3, 15);
+        ctx.fillRect(width/4 + 2, 0, 3, 15);
+    }
+
+    if (itemName === 'Washer' && type === 'metal') {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, height/6, width/3, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, height/6, width/4.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(width/3, height/6 - 5, 4, 10);
+    }
+
+    if (itemName === 'Dryer' && type === 'metal') {
+        const doorWidth = width * 0.65;
+        const doorHeight = height * 0.5;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-doorWidth/2, -height/8, doorWidth, doorHeight);
+
+        const innerWidth = doorWidth * 0.9;
+        const innerHeight = doorHeight * 0.9;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-innerWidth/2, -height/8 + (doorHeight - innerHeight)/2, innerWidth, innerHeight);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(doorWidth/2 - 8, height/8, 4, 12);
+    }
+
+    if (itemName === 'Nightstand' && type.startsWith('wood')) {
+        const drawerHeight = height * 0.4;
+        const drawerY = height * 0.15;
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-width * 0.4, drawerY, width * 0.8, drawerHeight);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(-8, drawerY + drawerHeight/2 - 2, 16, 4);
+    }
+
+    if (itemName === 'Vanity Dresser' && type.startsWith('wood')) {
+        const drawerWidth = width / 3.3;
+        const drawerHeight = height / 3.5;
+        const spacing = 4;
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1.5;
+
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                const x = -width/2 + spacing + col * (drawerWidth + spacing);
+                const y = -height/2 + spacing + row * (drawerHeight + spacing);
+
+                ctx.strokeRect(x, y, drawerWidth, drawerHeight);
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.beginPath();
+                ctx.arc(x + drawerWidth/2, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    if (itemName === 'Tall Chest' && type.startsWith('wood')) {
+        const drawerWidth = width * 0.85;
+        const drawerHeight = height / 5.5;
+        const spacing = 3;
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+
+        for (let i = 0; i < 5; i++) {
+            const y = -height/2 + spacing + i * (drawerHeight + spacing);
+
+            ctx.strokeRect(-drawerWidth/2, y, drawerWidth, drawerHeight);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.beginPath();
+            ctx.arc(-drawerWidth * 0.25, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(drawerWidth * 0.25, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    if (itemName === 'Toolbox' && type === 'metal') {
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -height/2, width * 0.25, Math.PI, 0, false);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(-8, 0, 16, 12);
+
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';
+        ctx.beginPath();
+        ctx.arc(0, 3, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(-width/2 + 3, -2, 10, 4);
+        ctx.fillRect(width/2 - 13, -2, 10, 4);
+    }
+
+    if (type === 'cardboard') {
+        const tapeWidth = width * 0.05;
+        const tapeHeight = height * 0.20;
+
+        ctx.fillStyle = 'rgba(101, 67, 33, 0.85)';
+        ctx.fillRect(-tapeWidth/2, -height/2, tapeWidth, 3);
+        ctx.fillRect(-tapeWidth/2, -height/2, tapeWidth, tapeHeight);
+
+        ctx.fillStyle = 'rgba(139, 90, 43, 0.4)';
+        ctx.fillRect(-tapeWidth/2 + 1, -height/2 + 1, tapeWidth - 2, 2);
+    }
+}
+
+function drawTruckFrame(context) {
+    const theme = BRAND_THEMES[currentBrand];
+    const doorWidth = 30;
+    const doorColor = theme.truckColors.doors;
+    const accentColor = theme.truckColors.accent;
+    const wheelColor = theme.truckColors.wheels;
+
+    context.fillStyle = '#444444';
+    context.fillRect(0, 540, TRUCK_WIDTH, TRUCK_HEIGHT - 540);
+
+    context.fillStyle = '#333333';
+    context.fillRect(0, 541, 30, 600 - 541);
+    context.fillRect(TRUCK_WIDTH - 30, 541, 30, 600 - 541);
+
+    context.fillStyle = doorColor;
+    context.fillRect(0, 0, doorWidth, 541);
+
+    context.strokeStyle = accentColor;
+    context.lineWidth = 2;
+    context.strokeRect(5, 20, doorWidth - 10, 541 - 40);
+
+    for (let i = 0; i < 3; i++) {
+        context.fillStyle = accentColor;
+        const hingeY = 100 + i * 200;
+        context.fillRect(2, hingeY, 6, 30);
+        context.fillRect(doorWidth - 8, hingeY, 6, 30);
+    }
+
+    context.fillStyle = doorColor;
+    context.fillRect(TRUCK_WIDTH - doorWidth, 0, doorWidth, 541);
+
+    context.strokeStyle = accentColor;
+    context.lineWidth = 2;
+    context.strokeRect(TRUCK_WIDTH - doorWidth + 5, 20, doorWidth - 10, 541 - 40);
+
+    for (let i = 0; i < 3; i++) {
+        context.fillStyle = accentColor;
+        const hingeY = 100 + i * 200;
+        context.fillRect(TRUCK_WIDTH - doorWidth + 2, hingeY, 6, 30);
+        context.fillRect(TRUCK_WIDTH - 8, hingeY, 6, 30);
+    }
+
+    context.fillStyle = '#C9A76A';
+    context.fillRect(0, 520, TRUCK_WIDTH, 20);
+
+    const tailLightY = 463;
+    const tailLightHeight = 15;
+    const tailLightWidth = 19;
+
+    context.fillStyle = '#8B0000';
+    context.fillRect(5, tailLightY, tailLightWidth, tailLightHeight);
+    context.fillStyle = '#FF4500';
+    context.fillRect(8, tailLightY + 3, tailLightWidth - 6, tailLightHeight - 6);
+
+    context.fillStyle = '#8B4500';
+    context.fillRect(5, tailLightY + 18, tailLightWidth, 12);
+    context.fillStyle = '#FFA500';
+    context.fillRect(8, tailLightY + 21, tailLightWidth - 6, 6);
+
+    context.fillStyle = '#8B0000';
+    context.fillRect(TRUCK_WIDTH - tailLightWidth - 5, tailLightY, tailLightWidth, tailLightHeight);
+    context.fillStyle = '#FF4500';
+    context.fillRect(TRUCK_WIDTH - tailLightWidth - 2, tailLightY + 3, tailLightWidth - 6, tailLightHeight - 6);
+
+    context.fillStyle = '#8B4500';
+    context.fillRect(TRUCK_WIDTH - tailLightWidth - 5, tailLightY + 18, tailLightWidth, 12);
+    context.fillStyle = '#FFA500';
+    context.fillRect(TRUCK_WIDTH - tailLightWidth - 2, tailLightY + 21, tailLightWidth - 6, 6);
+
+    const wheelWidth = 40;
+    const wheelHeight = 75;
+    const wheelY = 581;
+
+    const wheelPositions = [
+        { x: 40, y: wheelY },
+        { x: 90, y: wheelY },
+        { x: 315, y: wheelY },
+        { x: 362, y: wheelY }
+    ];
+
+    for (let wheel of wheelPositions) {
+        context.save();
+        context.translate(wheel.x, wheel.y);
+
+        const cornerRadius = 8;
+        context.fillStyle = '#1a1a1a';
+        context.beginPath();
+        context.roundRect(-wheelWidth/2, -wheelHeight/2, wheelWidth, wheelHeight, cornerRadius);
+        context.fill();
+
+        const rimWidth = wheelWidth * 0.6;
+        const rimHeight = wheelHeight * 0.7;
+        const rimRadius = 5;
+        context.fillStyle = wheelColor;
+        context.beginPath();
+        context.roundRect(-rimWidth/2, -rimHeight/2, rimWidth, rimHeight, rimRadius);
+        context.fill();
+
+        context.strokeStyle = '#444';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(-wheelWidth/2 + 2, 0);
+        context.lineTo(wheelWidth/2 - 2, 0);
+        context.stroke();
+
+        context.strokeStyle = '#000';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.roundRect(-wheelWidth/2, -wheelHeight/2, wheelWidth, wheelHeight, cornerRadius);
+        context.stroke();
+
+        context.restore();
+    }
+
+    const stepBarY = 564;
+    const stepBarHeight = 19;
+    const stepBarInset = 3;
+
+    context.fillStyle = '#888888';
+    context.fillRect(stepBarInset, stepBarY, TRUCK_WIDTH - (stepBarInset * 2), stepBarHeight);
+
+    context.fillStyle = '#AAAAAA';
+    context.fillRect(stepBarInset, stepBarY, TRUCK_WIDTH - (stepBarInset * 2), 2);
+
+    context.fillStyle = '#555555';
+    context.fillRect(stepBarInset, stepBarY + stepBarHeight - 2, TRUCK_WIDTH - (stepBarInset * 2), 2);
+}
+
+function draw() {
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, TRUCK_WIDTH, TRUCK_HEIGHT);
+
+    drawTruckFrame(ctx);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(30, 0, 340, TRUCK_HEIGHT);
+    ctx.clip();
+
+    const bodies = world.bodies.filter(b => !b.isStatic);
+
+    for (let body of bodies) {
+        if (body.furnitureData) {
+            drawFurnitureBody(ctx, body);
+        }
+    }
+
+    ctx.restore();
+}
+
+function drawFurnitureBody(context, body) {
+    const { type, name, width, height, color, texture, sprite } = body.furnitureData;
+    const { x, y } = body.position;
+    const angle = body.angle;
+
+    context.save();
+
+    context.translate(x, y);
+    context.rotate(angle);
+
+    if (body.isSleeping) {
+        context.globalAlpha = 0.7;
+    }
+
+    if (sprite && spritesLoaded && spriteImages[sprite]) {
+        const img = spriteImages[sprite];
+        context.drawImage(img, -width / 2, -height / 2, width, height);
+    } else {
+        context.beginPath();
+
+        if (type === 'rect') {
+            context.rect(-width / 2, -height / 2, width, height);
+        } else if (type === 'ellipse') {
+            context.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
+        } else {
+            context.rect(-width / 2, -height / 2, width, height);
+        }
+
+        createTexture(context, texture || 'default', color || '#999', width, height, name);
+
+        context.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        context.lineWidth = 2;
+        context.stroke();
+    }
+
+    context.restore();
+}
+
+function drawNextItem() {
+    nextCtx.fillStyle = '#f0f0f0';
+    nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+    if (nextItem) {
+        const scale = Math.min(100 / nextItem.width, 80 / nextItem.height);
+        const w = nextItem.width * scale;
+        const h = nextItem.height * scale;
+
+        const centerX = nextCanvas.width / 2;
+        const centerY = (nextCanvas.height - 20) / 2;
+
+        const { type, name, color, texture, sprite } = nextItem;
+
+        nextCtx.save();
+        nextCtx.translate(centerX, centerY);
+
+        if (sprite && spritesLoaded && spriteImages[sprite]) {
+            const img = spriteImages[sprite];
+            nextCtx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+            nextCtx.beginPath();
+            if (type === 'ellipse') {
+                nextCtx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+            } else {
+                nextCtx.rect(-w/2, -h/2, w, h);
+            }
+            nextCtx.closePath();
+
+            createTexture(nextCtx, texture || 'default', color || '#999', w, h, name);
+
+            nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+            nextCtx.lineWidth = 2;
+            nextCtx.stroke();
+        }
+
+        nextCtx.restore();
+
+        nextCtx.fillStyle = '#333';
+        nextCtx.font = 'bold 12px Arial';
+        nextCtx.textAlign = 'center';
+        nextCtx.fillText(name, nextCanvas.width / 2, nextCanvas.height - 8);
+    }
+}
+
+function updateScore() {
+    const bodies = world.bodies.filter(b => !b.isStatic && b.furnitureData);
+    let filledArea = 0;
+
+    for (let body of bodies) {
+        filledArea += body.furnitureData.width * body.furnitureData.height;
+    }
+
+    const totalArea = TRUCK_WIDTH * TRUCK_HEIGHT;
+    const efficiency = Math.round((filledArea / totalArea) * 100);
+
+    document.getElementById('efficiency').textContent = efficiency + '%';
+    document.getElementById('items').textContent = bodies.length;
+}
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('timer').textContent = elapsed + 's';
+
+    const messageEl = document.getElementById('message');
+    if (elapsed === 30) {
+        messageEl.textContent = 'Great job! Keep packing efficiently! 📦';
+        messageEl.style.display = 'block';
+        setTimeout(() => messageEl.style.display = 'none', 3000);
+    } else if (elapsed === 60) {
+        messageEl.textContent = 'Almost there! A rep will call you soon! 📞';
+        messageEl.style.display = 'block';
+        setTimeout(() => messageEl.style.display = 'none', 3000);
+    } else if (elapsed === 90) {
+        messageEl.textContent = 'Excellent packing! We\'ll be in touch shortly! ✨';
+        messageEl.style.display = 'block';
+    }
+}
+
+function endGame() {
+    isGameOver = true;
+    cancelAnimationFrame(gameLoop);
+    clearInterval(timerInterval);
+
+    const efficiency = document.getElementById('efficiency').textContent;
+
+    const overlay = document.getElementById('gameOverOverlay');
+    document.getElementById('finalEfficiency').textContent = efficiency;
+    document.getElementById('finalItems').textContent = itemsPacked;
+    overlay.style.display = 'flex';
+
+    const messageEl = document.getElementById('message');
+    if (messageEl) {
+        messageEl.style.display = 'none';
+    }
+}
+
+function startCountdown() {
+    const overlay = document.getElementById('countdownOverlay');
+    const numberEl = document.getElementById('countdownNumber');
+
+    overlay.style.display = 'flex';
+
+    let count = 3;
+    numberEl.textContent = count;
+
+    const countdownInterval = setInterval(() => {
+        count--;
+
+        if (count > 0) {
+            numberEl.textContent = count;
+            numberEl.style.animation = 'none';
+            setTimeout(() => {
+                numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
+            }, 10);
+        } else if (count === 0) {
+            numberEl.textContent = 'GO!';
+            numberEl.style.animation = 'none';
+            setTimeout(() => {
+                numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
+            }, 10);
+        } else {
+            clearInterval(countdownInterval);
+            overlay.style.display = 'none';
+
+            spawnItem();
+            gameLoop = requestAnimationFrame(update);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+    }, 1000);
+}
+
+function restartGame() {
+    const overlay = document.getElementById('gameOverOverlay');
+    overlay.style.display = 'none';
+
+    const bodiesToRemove = world.bodies.filter(b => !b.isStatic);
+    World.remove(world, bodiesToRemove);
+
+    currentBody = null;
+    nextItem = null;
+    itemsPacked = 0;
+    isGameOver = false;
+    isPlayerControlling = true;
+    startTime = Date.now();
+
+    document.getElementById('efficiency').textContent = '0%';
+    document.getElementById('items').textContent = '0';
+    document.getElementById('timer').textContent = '0s';
+
+    nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+    nextItem = getRandomItem();
+
+    startCountdown();
+}
+
+function applyBrandTheme(brandKey) {
+    const theme = BRAND_THEMES[brandKey];
+    if (!theme) return;
+
+    const root = document.documentElement;
+
+    root.style.setProperty('--brand-primary', theme.uiAccent);
+    root.style.setProperty('--brand-bg', theme.background);
+    root.style.setProperty('--truck-doors', theme.truckColors.doors);
+    root.style.setProperty('--truck-accent', theme.truckColors.accent);
+    root.style.setProperty('--truck-wheels', theme.truckColors.wheels);
+
+    currentBrand = brandKey;
+
+    localStorage.setItem('selectedBrand', brandKey);
+
+    if (ctx) {
+        draw();
+    }
+}
+
+function loadBrandPreference() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const brandParam = urlParams.get('brand');
+
+    if (brandParam && BRAND_THEMES[brandParam]) {
+        applyBrandTheme(brandParam);
+        return;
+    }
+
+    const saved = localStorage.getItem('selectedBrand');
+    if (saved && BRAND_THEMES[saved]) {
+        applyBrandTheme(saved);
+        return;
+    }
+
+    applyBrandTheme('brand1');
+}
+
+window.addEventListener('load', () => {
+    loadBrandPreference();
+    init();
+});
+    </script>
+</body>
+</html>

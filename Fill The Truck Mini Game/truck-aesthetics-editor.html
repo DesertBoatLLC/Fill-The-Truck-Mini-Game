@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Aesthetics Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 30px;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+        }
+
+        .control-group h3 {
+            color: #444;
+            margin-bottom: 12px;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group h3 .color-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid #999;
+        }
+
+        .slider-control {
+            margin-bottom: 12px;
+        }
+
+        .slider-control label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+        }
+
+        .slider-control input[type="range"] {
+            width: 100%;
+            margin-bottom: 3px;
+        }
+
+        .slider-value {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .color-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .color-control label {
+            color: #666;
+            font-size: 0.85em;
+            flex: 1;
+        }
+
+        .color-control input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .preview {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 4px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            background: white;
+        }
+
+        .preview-label {
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .export-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            border: 2px solid #4caf50;
+        }
+
+        .export-section h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+
+        .code-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button.success {
+            background: #4caf50;
+        }
+
+        button.success:hover {
+            background: #43a047;
+        }
+
+        button.warning {
+            background: #ff9800;
+        }
+
+        button.warning:hover {
+            background: #f57c00;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .preset-buttons button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚚 Truck Aesthetics Editor</h1>
+        <p class="subtitle">Fine-tune all truck visual elements - undercarriage, frame fill, wheels, and more</p>
+
+        <div class="preset-buttons">
+            <button onclick="applyPreset('default')">Default</button>
+            <button onclick="applyPreset('compact')">Compact</button>
+            <button onclick="applyPreset('noGaps')">No Gaps</button>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #C9A76A;"></span> Cargo Floor</h3>
+                    <div class="slider-control">
+                        <label>Y Position <span class="slider-value" id="floorY-value">520</span></label>
+                        <input type="range" id="floorY" min="480" max="560" value="520" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Height <span class="slider-value" id="floorHeight-value">20</span></label>
+                        <input type="range" id="floorHeight" min="10" max="50" value="20" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #2E86AB;"></span> Doors</h3>
+                    <div class="slider-control">
+                        <label>Door Width <span class="slider-value" id="doorWidth-value">30</span></label>
+                        <input type="range" id="doorWidth" min="20" max="50" value="30" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Door Bottom Y <span class="slider-value" id="doorHeight-value">535</span></label>
+                        <input type="range" id="doorHeight" min="500" max="560" value="535" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #FF4500;"></span> Tail Lights</h3>
+                    <div class="slider-control">
+                        <label>Y Position <span class="slider-value" id="tailLightY-value">480</span></label>
+                        <input type="range" id="tailLightY" min="440" max="520" value="480" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Width <span class="slider-value" id="tailLightWidth-value">20</span></label>
+                        <input type="range" id="tailLightWidth" min="10" max="35" value="20" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Height <span class="slider-value" id="tailLightHeight-value">15</span></label>
+                        <input type="range" id="tailLightHeight" min="8" max="25" value="15" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #888888;"></span> Step Bar</h3>
+                    <div class="slider-control">
+                        <label>Y Position <span class="slider-value" id="stepBarY-value">560</span></label>
+                        <input type="range" id="stepBarY" min="530" max="585" value="560" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Height <span class="slider-value" id="stepBarHeight-value">18</span></label>
+                        <input type="range" id="stepBarHeight" min="8" max="35" value="18" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Side Inset <span class="slider-value" id="stepBarInset-value">20</span></label>
+                        <input type="range" id="stepBarInset" min="0" max="60" value="20" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #1a1a1a;"></span> Wheels</h3>
+                    <div class="slider-control">
+                        <label>Center Y Position <span class="slider-value" id="wheelY-value">580</span></label>
+                        <input type="range" id="wheelY" min="550" max="600" value="580" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Width <span class="slider-value" id="wheelWidth-value">35</span></label>
+                        <input type="range" id="wheelWidth" min="20" max="50" value="35" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Height <span class="slider-value" id="wheelHeight-value">75</span></label>
+                        <input type="range" id="wheelHeight" min="50" max="100" value="75" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Left Outer X <span class="slider-value" id="wheelLeftOuter-value">55</span></label>
+                        <input type="range" id="wheelLeftOuter" min="30" max="80" value="55" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Left Inner X <span class="slider-value" id="wheelLeftInner-value">90</span></label>
+                        <input type="range" id="wheelLeftInner" min="60" max="120" value="90" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Right Inner X <span class="slider-value" id="wheelRightInner-value">310</span></label>
+                        <input type="range" id="wheelRightInner" min="280" max="340" value="310" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Right Outer X <span class="slider-value" id="wheelRightOuter-value">345</span></label>
+                        <input type="range" id="wheelRightOuter" min="320" max="370" value="345" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #555;"></span> Undercarriage Fill</h3>
+                    <div class="slider-control">
+                        <label>Fill Start Y <span class="slider-value" id="undercarriageY-value">540</span></label>
+                        <input type="range" id="undercarriageY" min="520" max="560" value="540" step="1">
+                    </div>
+                    <div class="color-control">
+                        <label>Fill Color</label>
+                        <input type="color" id="undercarriageColor" value="#444444">
+                    </div>
+                    <div class="slider-control">
+                        <label>Fill Enabled <span class="slider-value" id="undercarriageFill-value">Yes</span></label>
+                        <input type="range" id="undercarriageFill" min="0" max="1" value="1" step="1">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3><span class="color-indicator" style="background: #333;"></span> Frame Extension</h3>
+                    <div class="slider-control">
+                        <label>Left Frame Width <span class="slider-value" id="frameLeftWidth-value">30</span></label>
+                        <input type="range" id="frameLeftWidth" min="20" max="50" value="30" step="1">
+                    </div>
+                    <div class="slider-control">
+                        <label>Frame Bottom Y <span class="slider-value" id="frameBottomY-value">600</span></label>
+                        <input type="range" id="frameBottomY" min="560" max="600" value="600" step="1">
+                    </div>
+                    <div class="color-control">
+                        <label>Frame Fill Color</label>
+                        <input type="color" id="frameColor" value="#333333">
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview">
+                <canvas id="truckCanvas" width="400" height="600"></canvas>
+                <p class="preview-label">Live Preview - Changes update in real-time</p>
+            </div>
+        </div>
+
+        <div class="export-section">
+            <h3>📋 Export to game.js</h3>
+            <div class="button-row">
+                <button class="success" onclick="copyCode()">Copy Code to Clipboard</button>
+                <button class="warning" onclick="resetToDefault()">Reset All Values</button>
+            </div>
+            <div class="code-output" id="codeOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('truckCanvas');
+        const ctx = canvas.getContext('2d');
+        const TRUCK_WIDTH = 400;
+        const TRUCK_HEIGHT = 600;
+
+        // Get all slider elements
+        const sliders = {
+            floorY: document.getElementById('floorY'),
+            floorHeight: document.getElementById('floorHeight'),
+            doorWidth: document.getElementById('doorWidth'),
+            doorHeight: document.getElementById('doorHeight'),
+            tailLightY: document.getElementById('tailLightY'),
+            tailLightWidth: document.getElementById('tailLightWidth'),
+            tailLightHeight: document.getElementById('tailLightHeight'),
+            stepBarY: document.getElementById('stepBarY'),
+            stepBarHeight: document.getElementById('stepBarHeight'),
+            stepBarInset: document.getElementById('stepBarInset'),
+            wheelY: document.getElementById('wheelY'),
+            wheelWidth: document.getElementById('wheelWidth'),
+            wheelHeight: document.getElementById('wheelHeight'),
+            wheelLeftOuter: document.getElementById('wheelLeftOuter'),
+            wheelLeftInner: document.getElementById('wheelLeftInner'),
+            wheelRightInner: document.getElementById('wheelRightInner'),
+            wheelRightOuter: document.getElementById('wheelRightOuter'),
+            undercarriageY: document.getElementById('undercarriageY'),
+            undercarriageFill: document.getElementById('undercarriageFill'),
+            frameLeftWidth: document.getElementById('frameLeftWidth'),
+            frameBottomY: document.getElementById('frameBottomY')
+        };
+
+        const colorInputs = {
+            undercarriageColor: document.getElementById('undercarriageColor'),
+            frameColor: document.getElementById('frameColor')
+        };
+
+        // Update slider value displays
+        Object.keys(sliders).forEach(key => {
+            const slider = sliders[key];
+            const valueDisplay = document.getElementById(key + '-value');
+            slider.addEventListener('input', () => {
+                if (key === 'undercarriageFill') {
+                    valueDisplay.textContent = slider.value === '1' ? 'Yes' : 'No';
+                } else {
+                    valueDisplay.textContent = slider.value;
+                }
+                drawTruck();
+                updateCode();
+            });
+        });
+
+        Object.keys(colorInputs).forEach(key => {
+            colorInputs[key].addEventListener('input', () => {
+                drawTruck();
+                updateCode();
+            });
+        });
+
+        function drawTruck() {
+            // Clear canvas
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, TRUCK_WIDTH, TRUCK_HEIGHT);
+
+            const doorWidth = parseInt(sliders.doorWidth.value);
+            const doorHeight = parseInt(sliders.doorHeight.value);
+            const floorY = parseInt(sliders.floorY.value);
+            const floorHeight = parseInt(sliders.floorHeight.value);
+            const tailLightY = parseInt(sliders.tailLightY.value);
+            const tailLightWidth = parseInt(sliders.tailLightWidth.value);
+            const tailLightHeight = parseInt(sliders.tailLightHeight.value);
+            const stepBarY = parseInt(sliders.stepBarY.value);
+            const stepBarHeight = parseInt(sliders.stepBarHeight.value);
+            const stepBarInset = parseInt(sliders.stepBarInset.value);
+            const wheelY = parseInt(sliders.wheelY.value);
+            const wheelWidth = parseInt(sliders.wheelWidth.value);
+            const wheelHeight = parseInt(sliders.wheelHeight.value);
+            const wheelLeftOuter = parseInt(sliders.wheelLeftOuter.value);
+            const wheelLeftInner = parseInt(sliders.wheelLeftInner.value);
+            const wheelRightInner = parseInt(sliders.wheelRightInner.value);
+            const wheelRightOuter = parseInt(sliders.wheelRightOuter.value);
+            const undercarriageY = parseInt(sliders.undercarriageY.value);
+            const undercarriageFill = parseInt(sliders.undercarriageFill.value);
+            const frameLeftWidth = parseInt(sliders.frameLeftWidth.value);
+            const frameBottomY = parseInt(sliders.frameBottomY.value);
+            const undercarriageColor = colorInputs.undercarriageColor.value;
+            const frameColor = colorInputs.frameColor.value;
+
+            // Undercarriage fill (behind everything)
+            if (undercarriageFill) {
+                ctx.fillStyle = undercarriageColor;
+                ctx.fillRect(0, undercarriageY, TRUCK_WIDTH, TRUCK_HEIGHT - undercarriageY);
+            }
+
+            // Frame extension on sides (fills the gap between doors and wheels)
+            ctx.fillStyle = frameColor;
+            ctx.fillRect(0, doorHeight, frameLeftWidth, frameBottomY - doorHeight);
+            ctx.fillRect(TRUCK_WIDTH - frameLeftWidth, doorHeight, frameLeftWidth, frameBottomY - doorHeight);
+
+            // Wheels (draw before step bar so step bar is on top)
+            const wheelPositions = [
+                { x: wheelLeftOuter, y: wheelY },
+                { x: wheelLeftInner, y: wheelY },
+                { x: wheelRightInner, y: wheelY },
+                { x: wheelRightOuter, y: wheelY }
+            ];
+
+            wheelPositions.forEach(pos => {
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+
+                // Tire
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.roundRect(-wheelWidth/2, -wheelHeight/2, wheelWidth, wheelHeight, 8);
+                ctx.fill();
+
+                // Rim
+                ctx.fillStyle = '#2C3E50';
+                const rimW = wheelWidth * 0.6;
+                const rimH = wheelHeight * 0.7;
+                ctx.beginPath();
+                ctx.roundRect(-rimW/2, -rimH/2, rimW, rimH, 5);
+                ctx.fill();
+
+                // Rim detail
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-wheelWidth/2 + 2, 0);
+                ctx.lineTo(wheelWidth/2 - 2, 0);
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            // Step bar (on top of wheels)
+            ctx.fillStyle = '#888888';
+            ctx.fillRect(stepBarInset, stepBarY, TRUCK_WIDTH - (stepBarInset * 2), stepBarHeight);
+            ctx.fillStyle = '#AAAAAA';
+            ctx.fillRect(stepBarInset, stepBarY, TRUCK_WIDTH - (stepBarInset * 2), 2);
+            ctx.fillStyle = '#555555';
+            ctx.fillRect(stepBarInset, stepBarY + stepBarHeight - 2, TRUCK_WIDTH - (stepBarInset * 2), 2);
+
+            // Brown floor
+            ctx.fillStyle = '#C9A76A';
+            ctx.fillRect(0, floorY, TRUCK_WIDTH, floorHeight);
+
+            // Left door
+            ctx.fillStyle = '#2E86AB';
+            ctx.fillRect(0, 0, doorWidth, doorHeight);
+
+            // Right door
+            ctx.fillStyle = '#2E86AB';
+            ctx.fillRect(TRUCK_WIDTH - doorWidth, 0, doorWidth, doorHeight);
+
+            // Door panels
+            ctx.strokeStyle = '#1F4E5F';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(5, 20, doorWidth - 10, doorHeight - 40);
+            ctx.strokeRect(TRUCK_WIDTH - doorWidth + 5, 20, doorWidth - 10, doorHeight - 40);
+
+            // Hinges
+            for (let i = 0; i < 3; i++) {
+                ctx.fillStyle = '#1F4E5F';
+                const hingeY = 100 + i * 150;
+                if (hingeY < doorHeight - 30) {
+                    ctx.fillRect(2, hingeY, 6, 25);
+                    ctx.fillRect(doorWidth - 8, hingeY, 6, 25);
+                    ctx.fillRect(TRUCK_WIDTH - doorWidth + 2, hingeY, 6, 25);
+                    ctx.fillRect(TRUCK_WIDTH - 8, hingeY, 6, 25);
+                }
+            }
+
+            // Tail lights (left)
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(5, tailLightY, tailLightWidth, tailLightHeight);
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(8, tailLightY + 3, tailLightWidth - 6, tailLightHeight - 6);
+
+            // Amber lights (left)
+            ctx.fillStyle = '#8B4500';
+            ctx.fillRect(5, tailLightY + tailLightHeight + 3, tailLightWidth, 12);
+            ctx.fillStyle = '#FFA500';
+            ctx.fillRect(8, tailLightY + tailLightHeight + 6, tailLightWidth - 6, 6);
+
+            // Tail lights (right)
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(TRUCK_WIDTH - tailLightWidth - 5, tailLightY, tailLightWidth, tailLightHeight);
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(TRUCK_WIDTH - tailLightWidth - 2, tailLightY + 3, tailLightWidth - 6, tailLightHeight - 6);
+
+            // Amber lights (right)
+            ctx.fillStyle = '#8B4500';
+            ctx.fillRect(TRUCK_WIDTH - tailLightWidth - 5, tailLightY + tailLightHeight + 3, tailLightWidth, 12);
+            ctx.fillStyle = '#FFA500';
+            ctx.fillRect(TRUCK_WIDTH - tailLightWidth - 2, tailLightY + tailLightHeight + 6, tailLightWidth - 6, 6);
+        }
+
+        function updateCode() {
+            const values = {};
+            Object.keys(sliders).forEach(key => {
+                values[key] = parseInt(sliders[key].value);
+            });
+            values.undercarriageColor = colorInputs.undercarriageColor.value;
+            values.frameColor = colorInputs.frameColor.value;
+
+            const code = `// ===== TRUCK AESTHETICS - Paste into drawTruckFrame() in game.js =====
+
+// Cargo floor (around line 922)
+context.fillRect(0, ${values.floorY}, TRUCK_WIDTH, ${values.floorHeight});
+
+// Door dimensions (around line 887-906)
+const doorWidth = ${values.doorWidth};
+// Left door: context.fillRect(0, 0, doorWidth, ${values.doorHeight});
+// Right door: context.fillRect(TRUCK_WIDTH - doorWidth, 0, doorWidth, ${values.doorHeight});
+
+// Tail lights (around line 928)
+const tailLightY = ${values.tailLightY};
+const tailLightHeight = ${values.tailLightHeight};
+// Width in fillRect calls: ${values.tailLightWidth}
+
+// Step bar (around line 953)
+const stepBarY = ${values.stepBarY};
+const stepBarHeight = ${values.stepBarHeight};
+const stepBarInset = ${values.stepBarInset};
+
+// Wheels (around line 907)
+const wheelWidth = ${values.wheelWidth};
+const wheelHeight = ${values.wheelHeight};
+const wheelY = ${values.wheelY};
+const wheelPositions = [
+    { x: ${values.wheelLeftOuter}, y: wheelY },   // Left outer
+    { x: ${values.wheelLeftInner}, y: wheelY },   // Left inner
+    { x: ${values.wheelRightInner}, y: wheelY },  // Right inner
+    { x: ${values.wheelRightOuter}, y: wheelY }   // Right outer
+];
+
+// Undercarriage fill (add before wheels, around line 900)
+${values.undercarriageFill ? `context.fillStyle = '${values.undercarriageColor}';
+context.fillRect(0, ${values.undercarriageY}, TRUCK_WIDTH, TRUCK_HEIGHT - ${values.undercarriageY});` : '// Undercarriage fill disabled'}
+
+// Frame extension (add after undercarriage, fills door-to-wheel gap)
+context.fillStyle = '${values.frameColor}';
+context.fillRect(0, ${values.doorHeight}, ${values.frameLeftWidth}, ${values.frameBottomY} - ${values.doorHeight});
+context.fillRect(TRUCK_WIDTH - ${values.frameLeftWidth}, ${values.doorHeight}, ${values.frameLeftWidth}, ${values.frameBottomY} - ${values.doorHeight});`;
+
+            document.getElementById('codeOutput').textContent = code;
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copied to clipboard! ✅');
+            });
+        }
+
+        function resetToDefault() {
+            const defaults = {
+                floorY: 520, floorHeight: 20,
+                doorWidth: 30, doorHeight: 535,
+                tailLightY: 480, tailLightWidth: 20, tailLightHeight: 15,
+                stepBarY: 560, stepBarHeight: 18, stepBarInset: 20,
+                wheelY: 580, wheelWidth: 35, wheelHeight: 75,
+                wheelLeftOuter: 55, wheelLeftInner: 90, wheelRightInner: 310, wheelRightOuter: 345,
+                undercarriageY: 540, undercarriageFill: 1,
+                frameLeftWidth: 30, frameBottomY: 600
+            };
+            Object.keys(defaults).forEach(key => {
+                sliders[key].value = defaults[key];
+                const valueDisplay = document.getElementById(key + '-value');
+                if (key === 'undercarriageFill') {
+                    valueDisplay.textContent = defaults[key] === 1 ? 'Yes' : 'No';
+                } else {
+                    valueDisplay.textContent = defaults[key];
+                }
+            });
+            colorInputs.undercarriageColor.value = '#444444';
+            colorInputs.frameColor.value = '#333333';
+            drawTruck();
+            updateCode();
+        }
+
+        function applyPreset(preset) {
+            const presets = {
+                default: {
+                    floorY: 520, floorHeight: 20,
+                    doorWidth: 30, doorHeight: 535,
+                    tailLightY: 480, tailLightWidth: 20, tailLightHeight: 15,
+                    stepBarY: 560, stepBarHeight: 18, stepBarInset: 20,
+                    wheelY: 580, wheelWidth: 35, wheelHeight: 75,
+                    wheelLeftOuter: 55, wheelLeftInner: 90, wheelRightInner: 310, wheelRightOuter: 345,
+                    undercarriageY: 540, undercarriageFill: 1,
+                    frameLeftWidth: 30, frameBottomY: 600,
+                    undercarriageColor: '#444444', frameColor: '#333333'
+                },
+                compact: {
+                    floorY: 530, floorHeight: 15,
+                    doorWidth: 30, doorHeight: 545,
+                    tailLightY: 495, tailLightWidth: 18, tailLightHeight: 12,
+                    stepBarY: 565, stepBarHeight: 14, stepBarInset: 15,
+                    wheelY: 585, wheelWidth: 30, wheelHeight: 60,
+                    wheelLeftOuter: 50, wheelLeftInner: 82, wheelRightInner: 318, wheelRightOuter: 350,
+                    undercarriageY: 545, undercarriageFill: 1,
+                    frameLeftWidth: 30, frameBottomY: 600,
+                    undercarriageColor: '#3a3a3a', frameColor: '#2a2a2a'
+                },
+                noGaps: {
+                    floorY: 520, floorHeight: 25,
+                    doorWidth: 30, doorHeight: 545,
+                    tailLightY: 480, tailLightWidth: 20, tailLightHeight: 15,
+                    stepBarY: 555, stepBarHeight: 22, stepBarInset: 10,
+                    wheelY: 578, wheelWidth: 38, wheelHeight: 78,
+                    wheelLeftOuter: 48, wheelLeftInner: 88, wheelRightInner: 312, wheelRightOuter: 352,
+                    undercarriageY: 535, undercarriageFill: 1,
+                    frameLeftWidth: 30, frameBottomY: 600,
+                    undercarriageColor: '#3d3d3d', frameColor: '#2d2d2d'
+                }
+            };
+
+            const p = presets[preset];
+            Object.keys(sliders).forEach(key => {
+                if (p[key] !== undefined) {
+                    sliders[key].value = p[key];
+                    const valueDisplay = document.getElementById(key + '-value');
+                    if (key === 'undercarriageFill') {
+                        valueDisplay.textContent = p[key] === 1 ? 'Yes' : 'No';
+                    } else {
+                        valueDisplay.textContent = p[key];
+                    }
+                }
+            });
+            if (p.undercarriageColor) colorInputs.undercarriageColor.value = p.undercarriageColor;
+            if (p.frameColor) colorInputs.frameColor.value = p.frameColor;
+            drawTruck();
+            updateCode();
+        }
+
+        // Initial draw
+        drawTruck();
+        updateCode();
+    </script>
+</body>
+</html>

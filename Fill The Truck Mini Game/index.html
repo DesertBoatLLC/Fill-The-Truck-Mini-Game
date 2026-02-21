@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill The Truck - Moving Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🚚 Fill The Truck!</h1>
+            <p class="subtitle">Pack efficiently while we review your request</p>
+            <div class="brand-selector">
+                <label for="brandSelect">Theme: </label>
+                <select id="brandSelect">
+                    <option value="brand1">MoverCo</option>
+                    <option value="brand2">QuickHaul</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="info-item">
+                <span class="label">Space Efficiency:</span>
+                <span class="value" id="efficiency">0%</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Items Packed:</span>
+                <span class="value" id="items">0</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Time:</span>
+                <span class="value" id="timer">0s</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div class="next-piece-container">
+                <h3>Next Item:</h3>
+                <canvas id="nextPieceCanvas" width="120" height="120"></canvas>
+            </div>
+
+            <div class="truck-container">
+                <canvas id="gameCanvas" width="400" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <h3>Controls:</h3>
+                <ul>
+                    <li><strong>←/→</strong> Move</li>
+                    <li><strong>↑</strong> Rotate</li>
+                    <li><strong>↓</strong> or <strong>Space</strong> Drop</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div class="mobile-controls" id="mobileControls">
+            <button class="control-btn" id="rotateBtn">↻ Rotate</button>
+            <div class="direction-controls">
+                <button class="control-btn" id="leftBtn">←</button>
+                <button class="control-btn" id="downBtn">↓</button>
+                <button class="control-btn" id="rightBtn">→</button>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <!-- Game Over Overlay (outside container for full viewport coverage) -->
+    <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+        <div class="game-over-box">
+            <h2>Truck Full!</h2>
+            <p class="stats">
+                <strong>Final Efficiency:</strong> <span id="finalEfficiency"></span><br>
+                <strong>Items Packed:</strong> <span id="finalItems"></span>
+            </p>
+            <p class="cta-message">
+                Don't try to load the truck yourself, leave that to us.<br>
+                A member of our team will reach out to you shortly.
+            </p>
+            <button class="replay-btn" id="replayBtn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Countdown Overlay -->
+    <div class="countdown-overlay" id="countdownOverlay" style="display: none;">
+        <div class="countdown-number" id="countdownNumber">3</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
