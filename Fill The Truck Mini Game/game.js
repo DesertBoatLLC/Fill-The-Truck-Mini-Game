@@ -18,9 +18,9 @@ const FURNITURE_ITEMS = [
     { type: 'rect', width: 90, height: 135, name: 'Fridge', density: 0.003, sprite: 'fridge' },
     { type: 'rect', width: 80, height: 97, name: 'Washer', density: 0.003, sprite: 'washer' },
     { type: 'rect', width: 80, height: 83, name: 'Dryer', density: 0.003, sprite: 'dryer' },
-    { type: 'rect', width: 75, height: 51, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
+    { type: 'rect', width: 70, height: 45, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
     // Large furniture
-    { type: 'rect', width: 85, height: 80, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
+    { type: 'rect', width: 85, height: 110, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
     { type: 'rect', width: 140, height: 68, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
     { type: 'rect', width: 65, height: 100, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
     { type: 'rect', width: 45, height: 125, name: 'Grandfather Clock', density: 0.0025, sprite: 'grandfather_clock' },
@@ -40,15 +40,15 @@ const FURNITURE_ITEMS = [
     // Small items
     { type: 'rect', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant' },
     { type: 'rect', width: 45, height: 70, name: 'Trash Can', density: 0.001, sprite: 'trashcan' },
-    { type: 'rect', width: 45, height: 75, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
-    { type: 'rect', width: 50, height: 110, name: 'Guitar', density: 0.0008, sprite: 'guitar' },
+    { type: 'rect', width: 38, height: 63, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
+    { type: 'rect', width: 38, height: 63, name: 'Guitar', density: 0.0008, sprite: 'guitar' },
     // Boxes & small items
-    { type: 'rect', width: 90, height: 67, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
-    { type: 'rect', width: 70, height: 45, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
+    { type: 'rect', width: 65, height: 46, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
+    { type: 'rect', width: 50, height: 35, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
     { type: 'rect', width: 45, height: 37, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
     { type: 'rect', width: 55, height: 36, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
     { type: 'rect', width: 65, height: 38, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
-    { type: 'rect', width: 75, height: 50, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
+    { type: 'rect', width: 65, height: 46, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
 ];
 
 // Brand theming configuration
