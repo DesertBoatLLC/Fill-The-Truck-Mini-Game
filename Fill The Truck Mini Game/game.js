@@ -177,7 +177,7 @@ let spritesLoaded = false;
 // ==================== SPRITE LOADING ====================
 function loadSprites() {
     const spritePaths = {
-        fridge: 'fill_the_truck_assets_individual/sprites/Fridge.png',
+        fridge: 'fill_the_truck_assets_individual/sprites/Fridge-2-22.png',
         washer: 'fill_the_truck_assets_individual/sprites/Washer.png',
         dryer: 'fill_the_truck_assets_individual/sprites/Dryer.png',
         microwave: 'fill_the_truck_assets_individual/sprites/Microwave.png',
@@ -205,7 +205,7 @@ function loadSprites() {
         small_carton: 'fill_the_truck_assets_individual/sprites/Small Carton.png',
         book_box: 'fill_the_truck_assets_individual/sprites/Book Box.png',
         toolbox: 'fill_the_truck_assets_individual/sprites/Small Red Toolbox.png',
-        tote: 'fill_the_truck_assets_individual/sprites/Tote_Plastic_Yellow-top.png',
+        tote: 'fill_the_truck_assets_individual/sprites/Tote_Plastic_Yellow-top-2-22.png',
         armchair: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png',
         couch: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png',
         dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
