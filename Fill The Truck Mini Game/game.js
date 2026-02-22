@@ -8,32 +8,62 @@ const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
 const DEFAULT_RESTITUTION = 0.03; // Very low bounce
 const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
+const SPAWN_Y = -40; // Spawn just above visible area for quick entry
 
-// Furniture items with updated dimensions
-// Items with 'sprite' property will use image sprites instead of textured shapes
+// Furniture items — all sprite-based
+// Dimensions are game-world pixels (truck interior is 340px wide)
+// Density controls weight: heavy appliances ~0.003, furniture ~0.0015-0.002, light items ~0.0008-0.001
 const FURNITURE_ITEMS = [
-    { type: 'rect', width: 75, height: 120, name: 'Fridge', density: 0.003, color: '#E8E8E8', texture: 'metal' },
-    { type: 'rect', width: 70, height: 85, name: 'Washer', density: 0.003, color: '#F5F5F5', texture: 'metal' },
-    { type: 'rect', width: 70, height: 85, name: 'Dryer', density: 0.003, color: '#FFFFFF', texture: 'metal' },
-    { type: 'rect', width: 145, height: 65, name: 'Sofa', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'couch' },
-    { type: 'rect', width: 110, height: 65, name: 'Loveseat', density: 0.0015, color: '#D4B896', texture: 'fabric_tan', sprite: 'loveseat' },
-    { type: 'rect', width: 65, height: 65, name: 'Armchair', density: 0.0012, color: '#D4B896', texture: 'fabric_tan', sprite: 'armchair' },
-    { type: 'rect', width: 60, height: 60, name: 'Ottoman', density: 0.001, color: '#D4B896', texture: 'fabric_tan', sprite: 'ottoman' },
-    { type: 'rect', width: 40, height: 75, name: 'Dining Chair', density: 0.001, color: '#B8956E', texture: 'wood_oak', sprite: 'dining_chair' },
-    { type: 'rect', width: 60, height: 70, name: 'Nightstand', density: 0.0025, color: '#8B7355', texture: 'wood' },
-    { type: 'rect', width: 140, height: 80, name: 'Vanity Dresser', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
-    { type: 'rect', width: 60, height: 125, name: 'Tall Chest', density: 0.0025, color: '#8B6B4D', texture: 'wood_walnut' },
-    { type: 'ellipse', width: 100, height: 100, name: 'Kitchen Table', density: 0.0025, color: '#B8956E', texture: 'wood_oak' },
-    { type: 'rect', width: 68, height: 30, name: 'Toolbox', density: 0.0025, color: '#CC0000', texture: 'metal' },
-    { type: 'rect', width: 45, height: 30, name: 'Medium Box', density: 0.001, color: '#D2B48C', texture: 'cardboard' },
-    { type: 'rect', width: 20, height: 20, name: 'Small Box', density: 0.0008, color: '#C19A6B', texture: 'cardboard' },
-    { type: 'rect', width: 45, height: 45, name: 'Large Box', density: 0.0012, color: '#DEB887', texture: 'cardboard' },
-    { type: 'rect', width: 55, height: 40, name: 'Storage Tote', density: 0.0015, color: '#2D2D2D', texture: 'metal', sprite: 'tote_yellow' }
+    // Heavy appliances
+    { type: 'rect', width: 90, height: 135, name: 'Fridge', density: 0.003, sprite: 'fridge' },
+    { type: 'rect', width: 80, height: 97, name: 'Washer', density: 0.003, sprite: 'washer' },
+    { type: 'rect', width: 80, height: 83, name: 'Dryer', density: 0.003, sprite: 'dryer' },
+    { type: 'rect', width: 75, height: 51, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
+    // Large furniture
+    { type: 'rect', width: 85, height: 80, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
+    { type: 'rect', width: 140, height: 68, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
+    { type: 'rect', width: 65, height: 100, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
+    { type: 'rect', width: 45, height: 125, name: 'Grandfather Clock', density: 0.0025, sprite: 'grandfather_clock' },
+    { type: 'rect', width: 130, height: 71, name: 'Dining Table', density: 0.002, sprite: 'dining_table' },
+    { type: 'rect', width: 85, height: 60, name: 'Coffee Table', density: 0.0015, sprite: 'coffee_table' },
+    // Medium furniture
+    { type: 'rect', width: 60, height: 57, name: 'Nightstand', density: 0.0015, sprite: 'nightstand' },
+    { type: 'rect', width: 50, height: 85, name: 'Bar Stool', density: 0.0008, sprite: 'bar_stool' },
+    { type: 'rect', width: 50, height: 85, name: 'Mirror', density: 0.001, sprite: 'mirror' },
+    { type: 'rect', width: 70, height: 50, name: 'TV', density: 0.001, sprite: 'tv' },
+    { type: 'rect', width: 40, height: 125, name: 'Floor Lamp', density: 0.0008, sprite: 'floor_lamp' },
+    // Outdoor / bulky
+    { type: 'rect', width: 90, height: 77, name: 'BBQ Pit', density: 0.0015, sprite: 'bbq' },
+    { type: 'rect', width: 100, height: 60, name: 'Bicycle', density: 0.001, sprite: 'bicycle' },
+    { type: 'rect', width: 60, height: 63, name: 'Lawnmower', density: 0.0015, sprite: 'lawnmower' },
+    { type: 'rect', width: 75, height: 56, name: 'Wagon', density: 0.001, sprite: 'wagon' },
+    // Small items
+    { type: 'rect', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant' },
+    { type: 'rect', width: 45, height: 70, name: 'Trash Can', density: 0.001, sprite: 'trashcan' },
+    { type: 'rect', width: 45, height: 75, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
+    { type: 'rect', width: 50, height: 110, name: 'Guitar', density: 0.0008, sprite: 'guitar' },
+    // Boxes & small items
+    { type: 'rect', width: 90, height: 67, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
+    { type: 'rect', width: 70, height: 45, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
+    { type: 'rect', width: 45, height: 37, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
+    { type: 'rect', width: 55, height: 36, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
+    { type: 'rect', width: 65, height: 38, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
+    { type: 'rect', width: 75, height: 50, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
 ];
 
 // Brand theming configuration
 const BRAND_THEMES = {
-    brand1: {
+    americanMover: {
+        name: "American Mover",
+        truckColors: {
+            doors: "#B22234",
+            accent: "#F5F5F5",
+            wheels: "#3C3B6E"
+        },
+        background: "linear-gradient(135deg, #3C3B6E 0%, #B22234 100%)",
+        uiAccent: "#B22234"
+    },
+    moverCo: {
         name: "MoverCo",
         truckColors: {
             doors: "#FF6B35",
@@ -43,7 +73,7 @@ const BRAND_THEMES = {
         background: "linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)",
         uiAccent: "#FF6B35"
     },
-    brand2: {
+    quickHaul: {
         name: "QuickHaul",
         truckColors: {
             doors: "#2E86AB",
@@ -52,10 +82,60 @@ const BRAND_THEMES = {
         },
         background: "linear-gradient(135deg, #2E86AB 0%, #A23B72 100%)",
         uiAccent: "#2E86AB"
+    },
+    budgetHauler: {
+        name: "Budget Hauler",
+        truckColors: {
+            doors: "#FFD100",
+            accent: "#006B3F",
+            wheels: "#004D2C"
+        },
+        background: "linear-gradient(135deg, #FFD100 0%, #006B3F 100%)",
+        uiAccent: "#006B3F"
+    },
+    premiumLine: {
+        name: "Premium Line",
+        truckColors: {
+            doors: "#1B2A4A",
+            accent: "#C5A55A",
+            wheels: "#0F1A2E"
+        },
+        background: "linear-gradient(135deg, #1B2A4A 0%, #C5A55A 100%)",
+        uiAccent: "#1B2A4A"
+    },
+    safeStore: {
+        name: "SafeStore",
+        truckColors: {
+            doors: "#FF6600",
+            accent: "#004C97",
+            wheels: "#003060"
+        },
+        background: "linear-gradient(135deg, #FF6600 0%, #004C97 100%)",
+        uiAccent: "#FF6600"
+    },
+    ecoMove: {
+        name: "EcoMove",
+        truckColors: {
+            doors: "#4CAF50",
+            accent: "#E8E8E8",
+            wheels: "#2E7D32"
+        },
+        background: "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)",
+        uiAccent: "#4CAF50"
+    },
+    ironBox: {
+        name: "Iron Box",
+        truckColors: {
+            doors: "#444444",
+            accent: "#CC0000",
+            wheels: "#222222"
+        },
+        background: "linear-gradient(135deg, #444444 0%, #CC0000 100%)",
+        uiAccent: "#CC0000"
     }
 };
 
-let currentBrand = 'brand1'; // Default brand
+let currentBrand = 'americanMover'; // Default brand
 
 // ==================== MATTER.JS SETUP ====================
 const { Engine, World, Bodies, Body, Events, Sleeping } = Matter;
@@ -73,81 +153,42 @@ let lastTimestamp = 0;
 let gameLoop = null;
 let isPlayerControlling = true; // True when player has control
 
-// Texture image objects for photorealistic rendering
-const textureImages = {
-    wood: null,
-    wood_oak: null,
-    wood_walnut: null,
-    metal: null,
-    fabric: null,
-    fabric_tan: null,
-    fabric_gray: null,
-    cardboard: null
-};
-let texturesLoaded = false;
-
-// Sprite images for furniture items
-const spriteImages = {
-    couch: null,
-    loveseat: null,
-    armchair: null,
-    ottoman: null,
-    dining_chair: null,
-    tote_yellow: null
-};
+// Sprite images for all furniture items
+const spriteImages = {};
 let spritesLoaded = false;
 
-// Sprite crop regions (for sprites that need cropping)
-const spriteCrops = {
-    tote_yellow: { x: 295, y: 208, w: 945, h: 565 }
-};
-
-// ==================== TEXTURE LOADING ====================
-function loadTextures() {
-    const texturePaths = {
-        wood: 'wood-texture.png',
-        wood_oak: 'fill_the_truck_assets_individual/textures/wood_oak_tile.png',
-        wood_walnut: 'fill_the_truck_assets_individual/textures/wood_walnut_tile.png',
-        metal: 'metal-texture.png',
-        fabric: 'fabric-texture.png',
-        fabric_tan: 'fill_the_truck_assets_individual/textures/fabric_tan_tile.png',
-        fabric_gray: 'fill_the_truck_assets_individual/textures/fabric_gray_tile.png',
-        cardboard: 'cardboard-texture.png'
-    };
-
-    let loadedCount = 0;
-    const totalTextures = Object.keys(texturePaths).length;
-
-    for (let type in texturePaths) {
-        const img = new Image();
-        img.onload = () => {
-            textureImages[type] = img;
-            loadedCount++;
-            if (loadedCount === totalTextures) {
-                texturesLoaded = true;
-                console.log('All textures loaded successfully');
-            }
-        };
-        img.onerror = () => {
-            console.error(`Failed to load texture: ${texturePaths[type]}`);
-            loadedCount++;
-            if (loadedCount === totalTextures) {
-                console.log('Proceeding without some textures (will use fallback colors)');
-            }
-        };
-        img.src = texturePaths[type];
-    }
-}
-
-// Load furniture sprite images
+// ==================== SPRITE LOADING ====================
 function loadSprites() {
     const spritePaths = {
-        couch: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png',
-        loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
-        armchair: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png',
-        ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
-        dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
-        tote_yellow: 'fill_the_truck_sheet_assets/sprites/Tote_Plastic_Yellow-top.png'
+        fridge: 'fill_the_truck_assets_individual/sprites/Fridge.png',
+        washer: 'fill_the_truck_assets_individual/sprites/Washer.png',
+        dryer: 'fill_the_truck_assets_individual/sprites/Dryer.png',
+        microwave: 'fill_the_truck_assets_individual/sprites/Microwave.png',
+        piano: 'fill_the_truck_assets_individual/sprites/Upright Piano.png',
+        long_dresser: 'fill_the_truck_assets_individual/sprites/Long Dresser.png',
+        chest_of_drawers: 'fill_the_truck_assets_individual/sprites/Chest of Drawers.png',
+        grandfather_clock: 'fill_the_truck_assets_individual/sprites/Grandfather Clock.png',
+        dining_table: 'fill_the_truck_assets_individual/sprites/rectangle dining table.png',
+        coffee_table: 'fill_the_truck_assets_individual/sprites/Round Coffee Table.png',
+        nightstand: 'fill_the_truck_assets_individual/sprites/NightStand.png',
+        bar_stool: 'fill_the_truck_assets_individual/sprites/Bar Stool.png',
+        mirror: 'fill_the_truck_assets_individual/sprites/Mirror.png',
+        tv: 'fill_the_truck_assets_individual/sprites/TV.png',
+        floor_lamp: 'fill_the_truck_assets_individual/sprites/Floor Lamp.png',
+        bbq: 'fill_the_truck_assets_individual/sprites/BBQ Pit.png',
+        bicycle: 'fill_the_truck_assets_individual/sprites/Bicycle.png',
+        lawnmower: 'fill_the_truck_assets_individual/sprites/Lawnmower.png',
+        wagon: 'fill_the_truck_assets_individual/sprites/Wagon.png',
+        plant: 'fill_the_truck_assets_individual/sprites/Plant.png',
+        trashcan: 'fill_the_truck_assets_individual/sprites/TrashCan.png',
+        vacuum: 'fill_the_truck_assets_individual/sprites/Vacuum.png',
+        guitar: 'fill_the_truck_assets_individual/sprites/Acoustic Guitar.png',
+        large_carton: 'fill_the_truck_assets_individual/sprites/Large Carton.png',
+        medium_carton: 'fill_the_truck_assets_individual/sprites/Medium Carton.png',
+        small_carton: 'fill_the_truck_assets_individual/sprites/Small Carton.png',
+        book_box: 'fill_the_truck_assets_individual/sprites/Book Box.png',
+        toolbox: 'fill_the_truck_assets_individual/sprites/Small Red Toolbox.png',
+        tote: 'fill_the_truck_assets_individual/sprites/Tote_Plastic_Yellow-top.png',
     };
 
     let loadedCount = 0;
@@ -184,8 +225,7 @@ function init() {
     canvas.width = TRUCK_WIDTH;
     canvas.height = TRUCK_HEIGHT;
 
-    // Load photorealistic texture images and sprites
-    loadTextures();
+    // Load sprite images
     loadSprites();
 
     // Initialize physics engine
@@ -265,7 +305,7 @@ function getRandomSpawnX(itemWidth) {
 }
 
 function createFurnitureBody(furnitureItem) {
-    const { type, width, height, name, density, friction, color, texture } = furnitureItem;
+    const { type, width, height, name, density, friction } = furnitureItem;
 
     let body;
     const spawnX = getRandomSpawnX(width); // Random X position
@@ -276,7 +316,7 @@ function createFurnitureBody(furnitureItem) {
             // Create triangle using vertices
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: 0, y: height },
                     { x: width / 2, y: 0 },
@@ -297,7 +337,7 @@ function createFurnitureBody(furnitureItem) {
             // Create trapezoid (wider at bottom)
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: width * 0.2, y: 0 },
                     { x: width * 0.8, y: 0 },
@@ -319,7 +359,7 @@ function createFurnitureBody(furnitureItem) {
             // Create L-shaped polygon
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: 0, y: 0 },
                     { x: width * 0.5, y: 0 },
@@ -352,7 +392,7 @@ function createFurnitureBody(furnitureItem) {
             }
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 vertices,
                 {
                     isStatic: false, // Enable physics from spawn for Tetris-style falling
@@ -369,7 +409,7 @@ function createFurnitureBody(furnitureItem) {
             // Rectangle (default)
             body = Bodies.rectangle(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 width,
                 height,
                 {
@@ -384,8 +424,8 @@ function createFurnitureBody(furnitureItem) {
             break;
     }
 
-    // Attach metadata for rendering (include sprite if available)
-    body.furnitureData = { type, name, width, height, color, texture, sprite: furnitureItem.sprite };
+    // Attach metadata for rendering
+    body.furnitureData = { type, name, width, height, sprite: furnitureItem.sprite };
 
     World.add(world, body);
     return body;
@@ -431,22 +471,22 @@ function spawnItem() {
 }
 
 function checkGameOver() {
-    // Game over mechanic #1: Horizontal coverage near top of truck
-    // The fill line is at y=80 (near the top of the visible truck area).
+    // Game over mechanic #1: Horizontal coverage slightly above the truck frame
+    // The fill line is at y=-10 (just above the visible truck opening at y=0).
     // When items stack high enough that >50% of the truck width is blocked
     // at that height, the truck is full.
     //
-    // Game over mechanic #2: Overflow ceiling at y=-30 (just above visible frame)
+    // Game over mechanic #2: Overflow ceiling at y=-100 (well above visible frame)
     // If ANY non-current item's top crosses this line, game over immediately.
-    // This is the absolute ceiling — nothing should stack above the visible area.
+    // Safety net for narrow stacks that don't hit 50% coverage.
 
     const stackedBodies = world.bodies.filter(b => !b.isStatic);
     const TRUCK_INTERIOR_START = 30;  // Left door width
     const TRUCK_INTERIOR_END = 370;   // Right door starts at 370
     const TRUCK_INTERIOR_WIDTH = TRUCK_INTERIOR_END - TRUCK_INTERIOR_START;  // 340px total
     const COVERAGE_THRESHOLD = TRUCK_INTERIOR_WIDTH * 0.5;  // 170px (50% coverage)
-    const FILL_LINE_Y = 80;    // Coverage check line near top of visible truck
-    const OVERFLOW_CEILING_Y = -30;  // Absolute ceiling just above visible area
+    const FILL_LINE_Y = -10;   // Slightly above the visible truck frame top (y=0)
+    const OVERFLOW_CEILING_Y = -100;  // Absolute ceiling — safety net for narrow stacks
 
     // Track which horizontal segments are blocked above the fill line
     const blockedSegments = [];
@@ -689,240 +729,7 @@ function setupMobileControls() {
 }
 
 // ==================== RENDERING ====================
-function lightenColor(color, percent) {
-    // Simple color lightening helper
-    const num = parseInt(color.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = (num >> 16) + amt;
-    const G = (num >> 8 & 0x00FF) + amt;
-    const B = (num & 0x0000FF) + amt;
-    return '#' + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
-        (G<255?G<1?0:G:255)*0x100 +
-        (B<255?B<1?0:B:255))
-        .toString(16).slice(1);
-}
 
-function createTexture(ctx, type, baseColor, width, height, itemName) {
-    // Use photorealistic texture images if loaded
-    if (texturesLoaded && textureImages[type]) {
-        const img = textureImages[type];
-
-        // Calculate scale factor based on item size and texture type
-        let scaleFactor = 1;
-
-        // Adjust scale for different texture types to prevent crowding
-        if (type === 'cardboard') {
-            // Cardboard should scale to show 1-2 clean tile repetitions (matching wood/metal quality)
-            scaleFactor = Math.max(width, height) / 190;  // Larger divisor = smaller scale = fewer repetitions
-        } else if (type === 'fabric') {
-            // Fabric should scale to show 2-3 full weave patterns
-            scaleFactor = Math.max(width, height) / 80;
-        } else if (type === 'wood') {
-            // Wood grain should scale naturally
-            scaleFactor = Math.max(width, height) / 150;
-        } else if (type === 'metal') {
-            // Metal can tile more since it has fine horizontal lines
-            scaleFactor = Math.max(width, height) / 120;
-        }
-
-        // Apply scaling transformation
-        ctx.save();
-        ctx.scale(scaleFactor, scaleFactor);
-
-        // Create pattern and fill
-        const pattern = ctx.createPattern(img, 'repeat');
-        ctx.fillStyle = pattern;
-        ctx.fill();
-
-        ctx.restore();
-    } else {
-        // Fallback to solid color if textures not loaded yet
-        ctx.fillStyle = baseColor;
-        ctx.fill();
-    }
-
-    // Add item-specific details ON TOP of the texture
-    if (itemName === 'Fridge' && type === 'metal') {
-        // Door split line (vertical)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(0, -height/2);
-        ctx.lineTo(0, height/2);
-        ctx.stroke();
-
-        // Door handles
-        ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
-        ctx.fillRect(-width/4 - 5, 0, 3, 15);  // Left handle
-        ctx.fillRect(width/4 + 2, 0, 3, 15);   // Right handle
-    }
-
-    if (itemName === 'Washer' && type === 'metal') {
-        // Circular door in center (front-load washer)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, height/6, width/3, 0, Math.PI * 2);  // Large circle
-        ctx.stroke();
-
-        // Inner circle (door window)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(0, height/6, width/4.5, 0, Math.PI * 2);  // Smaller inner circle
-        ctx.stroke();
-
-        // Door handle (small rectangle on right side)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(width/3, height/6 - 5, 4, 10);
-    }
-
-    if (itemName === 'Dryer' && type === 'metal') {
-        // Rectangular door outline
-        const doorWidth = width * 0.65;
-        const doorHeight = height * 0.5;
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-doorWidth/2, -height/8, doorWidth, doorHeight);
-
-        // Inner rectangle (door panel)
-        const innerWidth = doorWidth * 0.9;
-        const innerHeight = doorHeight * 0.9;
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(-innerWidth/2, -height/8 + (doorHeight - innerHeight)/2, innerWidth, innerHeight);
-
-        // Door handle
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(doorWidth/2 - 8, height/8, 4, 12);
-    }
-
-    // Add nightstand-specific details (single drawer)
-    if (itemName === 'Nightstand' && type.startsWith('wood')) {
-        // Drawer outline (bottom half of nightstand)
-        const drawerHeight = height * 0.4;
-        const drawerY = height * 0.15;  // Position in lower half
-
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-width * 0.4, drawerY, width * 0.8, drawerHeight);
-
-        // Drawer handle (small horizontal bar)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(-8, drawerY + drawerHeight/2 - 2, 16, 4);
-    }
-
-    // Add vanity dresser details (3 columns × 3 rows of drawers)
-    if (itemName === 'Vanity Dresser' && type.startsWith('wood')) {
-        const drawerWidth = width / 3.3;  // 3 columns with spacing
-        const drawerHeight = height / 3.5;  // 3 rows with spacing
-        const spacing = 4;
-
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 1.5;
-
-        // Draw 3×3 grid of drawers
-        for (let row = 0; row < 3; row++) {
-            for (let col = 0; col < 3; col++) {
-                const x = -width/2 + spacing + col * (drawerWidth + spacing);
-                const y = -height/2 + spacing + row * (drawerHeight + spacing);
-
-                // Drawer outline
-                ctx.strokeRect(x, y, drawerWidth, drawerHeight);
-
-                // Drawer knob
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.beginPath();
-                ctx.arc(x + drawerWidth/2, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-
-    // Add tall chest details (5 vertical drawers)
-    if (itemName === 'Tall Chest' && type.startsWith('wood')) {
-        const drawerWidth = width * 0.85;
-        const drawerHeight = height / 5.5;  // 5 drawers with spacing
-        const spacing = 3;
-
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-
-        // Draw 5 stacked drawers
-        for (let i = 0; i < 5; i++) {
-            const y = -height/2 + spacing + i * (drawerHeight + spacing);
-
-            // Drawer outline
-            ctx.strokeRect(-drawerWidth/2, y, drawerWidth, drawerHeight);
-
-            // Two knobs per drawer
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.beginPath();
-            ctx.arc(-drawerWidth * 0.25, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(drawerWidth * 0.25, y + drawerHeight/2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    // Add toolbox details (red mechanic's toolbox)
-    if (itemName === 'Toolbox' && type === 'metal') {
-        // Top handle
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(0, -height/2, width * 0.25, Math.PI, 0, false);  // Curved handle on top
-        ctx.stroke();
-
-        // Front latch/lock plate (center)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(-8, 0, 16, 12);
-
-        // Lock keyhole
-        ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';  // Gold keyhole
-        ctx.beginPath();
-        ctx.arc(0, 3, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Side latches
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(-width/2 + 3, -2, 10, 4);  // Left latch
-        ctx.fillRect(width/2 - 13, -2, 10, 4);   // Right latch
-    }
-
-    if ((itemName === 'Sofa' || itemName === 'Loveseat') && type === 'fabric') {
-        // Cushion division lines (vertical)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 2;
-        const numCushions = itemName === 'Sofa' ? 3 : 2;
-        for (let i = 1; i < numCushions; i++) {
-            const x = -width/2 + (width/numCushions) * i;
-            ctx.beginPath();
-            ctx.moveTo(x, -height/2);
-            ctx.lineTo(x, height/2);
-            ctx.stroke();
-        }
-    }
-
-    // Add packing tape to cardboard boxes
-    if (type === 'cardboard') {
-        const tapeWidth = width * 0.05;  // Tape is 5% of box width
-        const tapeHeight = height * 0.20;  // Tape wraps 20% down from top
-
-        // Dark brown packing tape - horizontal strip on top
-        ctx.fillStyle = 'rgba(101, 67, 33, 0.85)';  // Dark brown tape color
-        ctx.fillRect(-tapeWidth/2, -height/2, tapeWidth, 3);  // Top edge
-
-        // Tape going down the front face (visible portion)
-        ctx.fillRect(-tapeWidth/2, -height/2, tapeWidth, tapeHeight);
-
-        // Subtle tape shine/highlight
-        ctx.fillStyle = 'rgba(139, 90, 43, 0.4)';
-        ctx.fillRect(-tapeWidth/2 + 1, -height/2 + 1, tapeWidth - 2, 2);
-    }
-}
 
 function drawTruckFrame(context) {
     const theme = BRAND_THEMES[currentBrand];
@@ -1103,7 +910,7 @@ function draw() {
 }
 
 function drawFurnitureBody(context, body) {
-    const { type, name, width, height, color, texture, sprite } = body.furnitureData;
+    const { name, width, height, sprite } = body.furnitureData;
     const { x, y } = body.position;
     const angle = body.angle;
 
@@ -1113,58 +920,20 @@ function drawFurnitureBody(context, body) {
     context.translate(x, y);
     context.rotate(angle);
 
-    // Opacity for sleeping items
-    if (body.isSleeping) {
-        context.globalAlpha = 0.7;
-    }
-
-    // Check if this item has a sprite and if sprites are loaded
-    if (sprite && spritesLoaded && spriteImages[sprite]) {
-        // Draw the sprite image scaled to fit the physics body dimensions
-        const img = spriteImages[sprite];
-
-        // Check if this sprite has a crop region defined
-        if (spriteCrops[sprite]) {
-            const crop = spriteCrops[sprite];
-            // Draw cropped region of sprite
-            context.drawImage(img, crop.x, crop.y, crop.w, crop.h, -width / 2, -height / 2, width, height);
-        } else {
-            // Draw full sprite
-            context.drawImage(img, -width / 2, -height / 2, width, height);
-        }
+    // Draw sprite if loaded, otherwise draw placeholder rectangle
+    if (sprite && spriteImages[sprite]) {
+        context.drawImage(spriteImages[sprite], -width / 2, -height / 2, width, height);
     } else {
-        // Fallback to textured shape rendering
-        context.beginPath();
-
-        // Draw shape path
-        if (type === 'rect') {
-            context.rect(-width / 2, -height / 2, width, height);
-        } else if (type === 'ellipse') {
-            // Draw ellipse/oval shape
-            context.ellipse(0, 0, width / 2, height / 2, 0, 0, Math.PI * 2);
-        } else if (body.vertices && body.vertices.length > 0) {
-            // Draw polygon using vertices
-            const firstVertex = body.vertices[0];
-            context.moveTo(firstVertex.x - x, firstVertex.y - y);
-
-            for (let i = 1; i < body.vertices.length; i++) {
-                const vertex = body.vertices[i];
-                context.lineTo(vertex.x - x, vertex.y - y);
-            }
-
-            context.closePath();
-        } else {
-            // Fallback to rectangle
-            context.rect(-width / 2, -height / 2, width, height);
-        }
-
-        // Apply texture instead of simple fill
-        createTexture(context, texture || 'default', color || '#999', width, height, name);
-
-        // Stroke outline
-        context.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-        context.lineWidth = 2;
-        context.stroke();
+        // Fallback placeholder while sprites load
+        context.fillStyle = '#999';
+        context.fillRect(-width / 2, -height / 2, width, height);
+        context.strokeStyle = 'rgba(0,0,0,0.4)';
+        context.lineWidth = 1;
+        context.strokeRect(-width / 2, -height / 2, width, height);
+        context.fillStyle = '#333';
+        context.font = '8px sans-serif';
+        context.textAlign = 'center';
+        context.fillText(name, 0, 3);
     }
 
     context.restore();
@@ -1184,80 +953,14 @@ function drawNextItem() {
         const centerX = nextCanvas.width / 2;
         const centerY = (nextCanvas.height - 20) / 2;
 
-        const { type, name, color, texture, sprite } = nextItem;
-
         nextCtx.save();
         nextCtx.translate(centerX, centerY);
 
-        // Check if this item has a sprite and if sprites are loaded
-        if (sprite && spritesLoaded && spriteImages[sprite]) {
-            // Draw the sprite image scaled to fit the preview
-            const img = spriteImages[sprite];
-
-            // Check if this sprite has a crop region defined
-            if (spriteCrops[sprite]) {
-                const crop = spriteCrops[sprite];
-                // Draw cropped region of sprite
-                nextCtx.drawImage(img, crop.x, crop.y, crop.w, crop.h, -w / 2, -h / 2, w, h);
-            } else {
-                // Draw full sprite
-                nextCtx.drawImage(img, -w / 2, -h / 2, w, h);
-            }
+        if (nextItem.sprite && spriteImages[nextItem.sprite]) {
+            nextCtx.drawImage(spriteImages[nextItem.sprite], -w / 2, -h / 2, w, h);
         } else {
-            // Fallback to textured shape rendering
-            nextCtx.beginPath();
-            switch(type) {
-                case 'ellipse':
-                    // Draw ellipse/oval shape
-                    nextCtx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
-                    break;
-
-                case 'triangle':
-                    nextCtx.moveTo(-w/2, h/2);
-                    nextCtx.lineTo(0, -h/2);
-                    nextCtx.lineTo(w/2, h/2);
-                    break;
-
-                case 'trapezoid':
-                    nextCtx.moveTo(-w*0.3, -h/2);
-                    nextCtx.lineTo(w*0.3, -h/2);
-                    nextCtx.lineTo(w/2, h/2);
-                    nextCtx.lineTo(-w/2, h/2);
-                    break;
-
-                case 'L-shape':
-                    nextCtx.moveTo(-w/2, -h/2);
-                    nextCtx.lineTo(0, -h/2);
-                    nextCtx.lineTo(0, 0);
-                    nextCtx.lineTo(w/2, 0);
-                    nextCtx.lineTo(w/2, h/2);
-                    nextCtx.lineTo(-w/2, h/2);
-                    break;
-
-                case 'pentagon':
-                    for (let i = 0; i < 5; i++) {
-                        const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
-                        const px = (w / 2) * Math.cos(angle);
-                        const py = (h / 2) * Math.sin(angle);
-                        if (i === 0) nextCtx.moveTo(px, py);
-                        else nextCtx.lineTo(px, py);
-                    }
-                    break;
-
-                default:
-                    // Rectangle
-                    nextCtx.rect(-w/2, -h/2, w, h);
-                    break;
-            }
-            nextCtx.closePath();
-
-            // Apply texture using the same function as the game
-            createTexture(nextCtx, texture || 'default', color || '#999', w, h, name);
-
-            // Stroke outline
-            nextCtx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-            nextCtx.lineWidth = 2;
-            nextCtx.stroke();
+            nextCtx.fillStyle = '#999';
+            nextCtx.fillRect(-w / 2, -h / 2, w, h);
         }
 
         nextCtx.restore();
@@ -1266,7 +969,7 @@ function drawNextItem() {
         nextCtx.fillStyle = '#333';
         nextCtx.font = 'bold 12px Arial';
         nextCtx.textAlign = 'center';
-        nextCtx.fillText(name, nextCanvas.width / 2, nextCanvas.height - 8);
+        nextCtx.fillText(nextItem.name, nextCanvas.width / 2, nextCanvas.height - 8);
     }
 }
 
@@ -1439,7 +1142,7 @@ function loadBrandPreference() {
     }
 
     // Use default
-    applyBrandTheme('brand1');
+    applyBrandTheme('americanMover');
 }
 
 // ==================== STARTUP ====================
