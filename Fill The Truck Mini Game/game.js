@@ -431,22 +431,22 @@ function spawnItem() {
 }
 
 function checkGameOver() {
-    // Game over mechanic #1: Horizontal coverage near top of truck
-    // The fill line is at y=80 (near the top of the visible truck area).
+    // Game over mechanic #1: Horizontal coverage slightly above the truck frame
+    // The fill line is at y=-10 (just above the visible truck opening at y=0).
     // When items stack high enough that >50% of the truck width is blocked
     // at that height, the truck is full.
     //
-    // Game over mechanic #2: Overflow ceiling at y=-30 (just above visible frame)
+    // Game over mechanic #2: Overflow ceiling at y=-100 (well above visible frame)
     // If ANY non-current item's top crosses this line, game over immediately.
-    // This is the absolute ceiling — nothing should stack above the visible area.
+    // Safety net for narrow stacks that don't hit 50% coverage.
 
     const stackedBodies = world.bodies.filter(b => !b.isStatic);
     const TRUCK_INTERIOR_START = 30;  // Left door width
     const TRUCK_INTERIOR_END = 370;   // Right door starts at 370
     const TRUCK_INTERIOR_WIDTH = TRUCK_INTERIOR_END - TRUCK_INTERIOR_START;  // 340px total
     const COVERAGE_THRESHOLD = TRUCK_INTERIOR_WIDTH * 0.5;  // 170px (50% coverage)
-    const FILL_LINE_Y = 80;    // Coverage check line near top of visible truck
-    const OVERFLOW_CEILING_Y = -30;  // Absolute ceiling just above visible area
+    const FILL_LINE_Y = -10;   // Slightly above the visible truck frame top (y=0)
+    const OVERFLOW_CEILING_Y = -100;  // Absolute ceiling — safety net for narrow stacks
 
     // Track which horizontal segments are blocked above the fill line
     const blockedSegments = [];
