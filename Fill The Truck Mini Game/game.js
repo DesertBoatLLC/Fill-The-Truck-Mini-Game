@@ -33,7 +33,17 @@ const FURNITURE_ITEMS = [
 
 // Brand theming configuration
 const BRAND_THEMES = {
-    brand1: {
+    americanMover: {
+        name: "American Mover",
+        truckColors: {
+            doors: "#B22234",
+            accent: "#F5F5F5",
+            wheels: "#3C3B6E"
+        },
+        background: "linear-gradient(135deg, #3C3B6E 0%, #B22234 100%)",
+        uiAccent: "#B22234"
+    },
+    moverCo: {
         name: "MoverCo",
         truckColors: {
             doors: "#FF6B35",
@@ -43,7 +53,7 @@ const BRAND_THEMES = {
         background: "linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)",
         uiAccent: "#FF6B35"
     },
-    brand2: {
+    quickHaul: {
         name: "QuickHaul",
         truckColors: {
             doors: "#2E86AB",
@@ -52,10 +62,60 @@ const BRAND_THEMES = {
         },
         background: "linear-gradient(135deg, #2E86AB 0%, #A23B72 100%)",
         uiAccent: "#2E86AB"
+    },
+    budgetHauler: {
+        name: "Budget Hauler",
+        truckColors: {
+            doors: "#FFD100",
+            accent: "#006B3F",
+            wheels: "#004D2C"
+        },
+        background: "linear-gradient(135deg, #FFD100 0%, #006B3F 100%)",
+        uiAccent: "#006B3F"
+    },
+    premiumLine: {
+        name: "Premium Line",
+        truckColors: {
+            doors: "#1B2A4A",
+            accent: "#C5A55A",
+            wheels: "#0F1A2E"
+        },
+        background: "linear-gradient(135deg, #1B2A4A 0%, #C5A55A 100%)",
+        uiAccent: "#1B2A4A"
+    },
+    safeStore: {
+        name: "SafeStore",
+        truckColors: {
+            doors: "#FF6600",
+            accent: "#004C97",
+            wheels: "#003060"
+        },
+        background: "linear-gradient(135deg, #FF6600 0%, #004C97 100%)",
+        uiAccent: "#FF6600"
+    },
+    ecoMove: {
+        name: "EcoMove",
+        truckColors: {
+            doors: "#4CAF50",
+            accent: "#E8E8E8",
+            wheels: "#2E7D32"
+        },
+        background: "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)",
+        uiAccent: "#4CAF50"
+    },
+    ironBox: {
+        name: "Iron Box",
+        truckColors: {
+            doors: "#444444",
+            accent: "#CC0000",
+            wheels: "#222222"
+        },
+        background: "linear-gradient(135deg, #444444 0%, #CC0000 100%)",
+        uiAccent: "#CC0000"
     }
 };
 
-let currentBrand = 'brand1'; // Default brand
+let currentBrand = 'americanMover'; // Default brand
 
 // ==================== MATTER.JS SETUP ====================
 const { Engine, World, Bodies, Body, Events, Sleeping } = Matter;
@@ -1439,7 +1499,7 @@ function loadBrandPreference() {
     }
 
     // Use default
-    applyBrandTheme('brand1');
+    applyBrandTheme('americanMover');
 }
 
 // ==================== STARTUP ====================

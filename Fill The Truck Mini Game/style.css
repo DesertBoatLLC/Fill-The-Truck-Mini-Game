@@ -1,10 +1,10 @@
 :root {
     /* Brand theme colors - dynamically updated by JavaScript */
-    --brand-primary: #FF6B35;
-    --brand-bg: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
-    --truck-doors: #FF6B35;
-    --truck-accent: #2C3E50;
-    --truck-wheels: #2C3E50;
+    --brand-primary: #B22234;
+    --brand-bg: linear-gradient(135deg, #3C3B6E 0%, #B22234 100%);
+    --truck-doors: #B22234;
+    --truck-accent: #F5F5F5;
+    --truck-wheels: #3C3B6E;
 }
 
 * {
