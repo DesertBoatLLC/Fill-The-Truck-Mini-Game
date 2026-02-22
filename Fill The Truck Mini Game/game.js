@@ -15,40 +15,51 @@ const SPAWN_Y = -40; // Spawn just above visible area for quick entry
 // Density controls weight: heavy appliances ~0.003, furniture ~0.0015-0.002, light items ~0.0008-0.001
 const FURNITURE_ITEMS = [
     // Heavy appliances
-    { type: 'rect', width: 90, height: 135, name: 'Fridge', density: 0.003, sprite: 'fridge' },
+    { type: 'rect', width: 105, height: 155, name: 'Fridge', density: 0.003, sprite: 'fridge' },
     { type: 'rect', width: 80, height: 97, name: 'Washer', density: 0.003, sprite: 'washer' },
-    { type: 'rect', width: 80, height: 83, name: 'Dryer', density: 0.003, sprite: 'dryer' },
-    { type: 'rect', width: 75, height: 51, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
+    { type: 'rect', width: 80, height: 97, name: 'Dryer', density: 0.003, sprite: 'dryer' },
+    { type: 'rect', width: 70, height: 45, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
     // Large furniture
-    { type: 'rect', width: 85, height: 80, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
-    { type: 'rect', width: 140, height: 68, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
-    { type: 'rect', width: 65, height: 100, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
+    { type: 'rect', width: 90, height: 120, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
+    { type: 'rect', width: 140, height: 78, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
+    { type: 'rect', width: 65, height: 95, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
     { type: 'rect', width: 45, height: 125, name: 'Grandfather Clock', density: 0.0025, sprite: 'grandfather_clock' },
-    { type: 'rect', width: 130, height: 71, name: 'Dining Table', density: 0.002, sprite: 'dining_table' },
-    { type: 'rect', width: 85, height: 60, name: 'Coffee Table', density: 0.0015, sprite: 'coffee_table' },
+    { type: 'polygon', width: 130, height: 71, name: 'Dining Table', density: 0.002, sprite: 'dining_table',
+        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.4,0.5],[-0.4,0.5]] },
+    { type: 'polygon', width: 85, height: 60, name: 'Coffee Table', density: 0.0015, sprite: 'coffee_table',
+        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.45,0.0],[0.3,0.5],[-0.3,0.5],[-0.45,0.0]] },
     // Medium furniture
-    { type: 'rect', width: 60, height: 57, name: 'Nightstand', density: 0.0015, sprite: 'nightstand' },
-    { type: 'rect', width: 50, height: 85, name: 'Bar Stool', density: 0.0008, sprite: 'bar_stool' },
+    { type: 'rect', width: 55, height: 52, name: 'Nightstand', density: 0.0015, sprite: 'nightstand' },
+    { type: 'polygon', width: 38, height: 65, name: 'Bar Stool', density: 0.0008, sprite: 'bar_stool',
+        vertices: [[-0.4,-0.5],[0.4,-0.5],[0.3,-0.25],[0.45,0.5],[0.15,0.5],[0.0,0.0],[-0.15,0.5],[-0.45,0.5],[-0.3,-0.25]] },
     { type: 'rect', width: 50, height: 85, name: 'Mirror', density: 0.001, sprite: 'mirror' },
-    { type: 'rect', width: 70, height: 50, name: 'TV', density: 0.001, sprite: 'tv' },
-    { type: 'rect', width: 40, height: 125, name: 'Floor Lamp', density: 0.0008, sprite: 'floor_lamp' },
+    { type: 'polygon', width: 80, height: 60, name: 'TV', density: 0.001, sprite: 'tv',
+        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.5,0.15],[0.2,0.15],[0.25,0.5],[-0.25,0.5],[-0.2,0.15],[-0.5,0.15]] },
+    { type: 'polygon', width: 40, height: 125, name: 'Floor Lamp', density: 0.0008, sprite: 'floor_lamp',
+        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.3,-0.32],[0.15,-0.32],[0.15,0.38],[0.3,0.5],[-0.3,0.5],[-0.15,0.38],[-0.15,-0.32],[-0.3,-0.32]] },
     // Outdoor / bulky
-    { type: 'rect', width: 90, height: 77, name: 'BBQ Pit', density: 0.0015, sprite: 'bbq' },
-    { type: 'rect', width: 100, height: 60, name: 'Bicycle', density: 0.001, sprite: 'bicycle' },
-    { type: 'rect', width: 60, height: 63, name: 'Lawnmower', density: 0.0015, sprite: 'lawnmower' },
-    { type: 'rect', width: 75, height: 56, name: 'Wagon', density: 0.001, sprite: 'wagon' },
+    { type: 'polygon', width: 90, height: 77, name: 'BBQ Pit', density: 0.0015, sprite: 'bbq',
+        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.5,0.05],[0.35,0.05],[0.3,0.5],[0.1,0.5],[0.1,0.15],[-0.1,0.15],[-0.1,0.5],[-0.3,0.5],[-0.35,0.05],[-0.5,0.05]] },
+    { type: 'polygon', width: 100, height: 60, name: 'Bicycle', density: 0.001, sprite: 'bicycle',
+        vertices: [[-0.3,-0.5],[0.35,-0.5],[0.5,-0.1],[0.45,0.5],[0.15,0.3],[-0.15,0.3],[-0.45,0.5],[-0.5,-0.1]] },
+    { type: 'polygon', width: 60, height: 63, name: 'Lawnmower', density: 0.0015, sprite: 'lawnmower',
+        vertices: [[-0.3,-0.5],[0.2,-0.5],[0.5,0.0],[0.5,0.5],[-0.5,0.5],[-0.5,0.0]] },
+    { type: 'polygon', width: 75, height: 56, name: 'Wagon', density: 0.001, sprite: 'wagon',
+        vertices: [[-0.5,-0.5],[-0.3,-0.5],[-0.3,-0.1],[0.5,-0.1],[0.5,0.5],[-0.5,0.5]] },
     // Small items
-    { type: 'rect', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant' },
+    { type: 'polygon', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant',
+        vertices: [[0.0,-0.5],[0.5,-0.1],[0.35,0.1],[0.25,0.1],[0.25,0.5],[-0.25,0.5],[-0.25,0.1],[-0.35,0.1],[-0.5,-0.1]] },
     { type: 'rect', width: 45, height: 70, name: 'Trash Can', density: 0.001, sprite: 'trashcan' },
-    { type: 'rect', width: 45, height: 75, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
-    { type: 'rect', width: 50, height: 110, name: 'Guitar', density: 0.0008, sprite: 'guitar' },
+    { type: 'rect', width: 45, height: 69, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
+    { type: 'polygon', width: 38, height: 87, name: 'Guitar', density: 0.0008, sprite: 'guitar',
+        vertices: [[-0.15,-0.5],[0.15,-0.5],[0.12,-0.1],[0.5,0.15],[0.4,0.5],[-0.4,0.5],[-0.5,0.15],[-0.12,-0.1]] },
     // Boxes & small items
-    { type: 'rect', width: 90, height: 67, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
-    { type: 'rect', width: 70, height: 45, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
+    { type: 'rect', width: 65, height: 46, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
+    { type: 'rect', width: 50, height: 35, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
     { type: 'rect', width: 45, height: 37, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
     { type: 'rect', width: 55, height: 36, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
-    { type: 'rect', width: 65, height: 38, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
-    { type: 'rect', width: 75, height: 50, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
+    { type: 'rect', width: 65, height: 43, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
+    { type: 'rect', width: 80, height: 52, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
 ];
 
 // Brand theming configuration
@@ -405,6 +416,39 @@ function createFurnitureBody(furnitureItem) {
             );
             break;
 
+        case 'polygon': {
+            // Custom polygon from vertex data — supports concave shapes via poly-decomp
+            const scaledVerts = furnitureItem.vertices.map(v => ({
+                x: v[0] * width,
+                y: v[1] * height
+            }));
+            body = Bodies.fromVertices(
+                spawnX,
+                SPAWN_Y,
+                scaledVerts,
+                {
+                    isStatic: false,
+                    friction: friction || DEFAULT_FRICTION,
+                    restitution: DEFAULT_RESTITUTION,
+                    density: density || DEFAULT_DENSITY,
+                    sleepThreshold: SLEEP_THRESHOLD,
+                    label: type
+                }
+            );
+            // Fallback to rectangle if fromVertices fails (degenerate polygon)
+            if (!body) {
+                body = Bodies.rectangle(spawnX, SPAWN_Y, width, height, {
+                    isStatic: false,
+                    friction: friction || DEFAULT_FRICTION,
+                    restitution: DEFAULT_RESTITUTION,
+                    density: density || DEFAULT_DENSITY,
+                    sleepThreshold: SLEEP_THRESHOLD,
+                    label: 'rect'
+                });
+            }
+            break;
+        }
+
         default:
             // Rectangle (default)
             body = Bodies.rectangle(
@@ -426,6 +470,17 @@ function createFurnitureBody(furnitureItem) {
 
     // Attach metadata for rendering
     body.furnitureData = { type, name, width, height, sprite: furnitureItem.sprite };
+
+    // For polygon bodies, calculate offset between center-of-mass and bounding box center
+    // so sprites render aligned with the physics shape
+    if (type === 'polygon') {
+        const bcx = (body.bounds.min.x + body.bounds.max.x) / 2;
+        const bcy = (body.bounds.min.y + body.bounds.max.y) / 2;
+        body.furnitureData.renderOffset = {
+            x: bcx - body.position.x,
+            y: bcy - body.position.y
+        };
+    }
 
     World.add(world, body);
     return body;
@@ -910,9 +965,14 @@ function draw() {
 }
 
 function drawFurnitureBody(context, body) {
-    const { name, width, height, sprite } = body.furnitureData;
+    const { name, width, height, sprite, renderOffset } = body.furnitureData;
     const { x, y } = body.position;
     const angle = body.angle;
+
+    // Render offset compensates for center-of-mass vs bounding-box-center difference
+    // in polygon bodies created via Bodies.fromVertices
+    const ox = renderOffset ? renderOffset.x : 0;
+    const oy = renderOffset ? renderOffset.y : 0;
 
     context.save();
 
@@ -922,18 +982,18 @@ function drawFurnitureBody(context, body) {
 
     // Draw sprite if loaded, otherwise draw placeholder rectangle
     if (sprite && spriteImages[sprite]) {
-        context.drawImage(spriteImages[sprite], -width / 2, -height / 2, width, height);
+        context.drawImage(spriteImages[sprite], -width / 2 + ox, -height / 2 + oy, width, height);
     } else {
         // Fallback placeholder while sprites load
         context.fillStyle = '#999';
-        context.fillRect(-width / 2, -height / 2, width, height);
+        context.fillRect(-width / 2 + ox, -height / 2 + oy, width, height);
         context.strokeStyle = 'rgba(0,0,0,0.4)';
         context.lineWidth = 1;
-        context.strokeRect(-width / 2, -height / 2, width, height);
+        context.strokeRect(-width / 2 + ox, -height / 2 + oy, width, height);
         context.fillStyle = '#333';
         context.font = '8px sans-serif';
         context.textAlign = 'center';
-        context.fillText(name, 0, 3);
+        context.fillText(name, ox, 3 + oy);
     }
 
     context.restore();
