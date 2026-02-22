@@ -17,7 +17,7 @@ const FURNITURE_ITEMS = [
     // Heavy appliances
     { type: 'rect', width: 105, height: 155, name: 'Fridge', density: 0.003, sprite: 'fridge' },
     { type: 'rect', width: 80, height: 97, name: 'Washer', density: 0.003, sprite: 'washer' },
-    { type: 'rect', width: 80, height: 83, name: 'Dryer', density: 0.003, sprite: 'dryer' },
+    { type: 'rect', width: 80, height: 97, name: 'Dryer', density: 0.003, sprite: 'dryer' },
     { type: 'rect', width: 70, height: 45, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
     // Large furniture
     { type: 'rect', width: 90, height: 120, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
@@ -29,11 +29,11 @@ const FURNITURE_ITEMS = [
     { type: 'polygon', width: 85, height: 60, name: 'Coffee Table', density: 0.0015, sprite: 'coffee_table',
         vertices: [[-0.5,-0.5],[0.5,-0.5],[0.45,0.0],[0.3,0.5],[-0.3,0.5],[-0.45,0.0]] },
     // Medium furniture
-    { type: 'rect', width: 60, height: 57, name: 'Nightstand', density: 0.0015, sprite: 'nightstand' },
+    { type: 'rect', width: 55, height: 52, name: 'Nightstand', density: 0.0015, sprite: 'nightstand' },
     { type: 'polygon', width: 38, height: 65, name: 'Bar Stool', density: 0.0008, sprite: 'bar_stool',
         vertices: [[-0.4,-0.5],[0.4,-0.5],[0.3,-0.25],[0.45,0.5],[0.15,0.5],[0.0,0.0],[-0.15,0.5],[-0.45,0.5],[-0.3,-0.25]] },
     { type: 'rect', width: 50, height: 85, name: 'Mirror', density: 0.001, sprite: 'mirror' },
-    { type: 'polygon', width: 70, height: 50, name: 'TV', density: 0.001, sprite: 'tv',
+    { type: 'polygon', width: 80, height: 60, name: 'TV', density: 0.001, sprite: 'tv',
         vertices: [[-0.5,-0.5],[0.5,-0.5],[0.5,0.15],[0.2,0.15],[0.25,0.5],[-0.25,0.5],[-0.2,0.15],[-0.5,0.15]] },
     { type: 'polygon', width: 40, height: 125, name: 'Floor Lamp', density: 0.0008, sprite: 'floor_lamp',
         vertices: [[-0.5,-0.5],[0.5,-0.5],[0.3,-0.32],[0.15,-0.32],[0.15,0.38],[0.3,0.5],[-0.3,0.5],[-0.15,0.38],[-0.15,-0.32],[-0.3,-0.32]] },
@@ -50,16 +50,16 @@ const FURNITURE_ITEMS = [
     { type: 'polygon', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant',
         vertices: [[0.0,-0.5],[0.5,-0.1],[0.35,0.1],[0.25,0.1],[0.25,0.5],[-0.25,0.5],[-0.25,0.1],[-0.35,0.1],[-0.5,-0.1]] },
     { type: 'rect', width: 45, height: 70, name: 'Trash Can', density: 0.001, sprite: 'trashcan' },
-    { type: 'rect', width: 38, height: 63, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
-    { type: 'polygon', width: 38, height: 63, name: 'Guitar', density: 0.0008, sprite: 'guitar',
+    { type: 'rect', width: 45, height: 69, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
+    { type: 'polygon', width: 38, height: 87, name: 'Guitar', density: 0.0008, sprite: 'guitar',
         vertices: [[-0.15,-0.5],[0.15,-0.5],[0.12,-0.1],[0.5,0.15],[0.4,0.5],[-0.4,0.5],[-0.5,0.15],[-0.12,-0.1]] },
     // Boxes & small items
     { type: 'rect', width: 65, height: 46, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
     { type: 'rect', width: 50, height: 35, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
     { type: 'rect', width: 45, height: 37, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
     { type: 'rect', width: 55, height: 36, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
-    { type: 'rect', width: 65, height: 38, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
-    { type: 'rect', width: 65, height: 46, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
+    { type: 'rect', width: 65, height: 43, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
+    { type: 'rect', width: 80, height: 52, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
 ];
 
 // Brand theming configuration
