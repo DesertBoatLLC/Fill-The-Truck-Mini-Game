@@ -15,12 +15,12 @@ const SPAWN_Y = -40; // Spawn just above visible area for quick entry
 // Density controls weight: heavy appliances ~0.003, furniture ~0.0015-0.002, light items ~0.0008-0.001
 const FURNITURE_ITEMS = [
     // Heavy appliances
-    { type: 'rect', width: 105, height: 155, name: 'Fridge', density: 0.003, sprite: 'fridge' },
+    { type: 'rect', width: 85, height: 135, name: 'Fridge', density: 0.003, sprite: 'fridge' },
     { type: 'rect', width: 80, height: 97, name: 'Washer', density: 0.003, sprite: 'washer' },
     { type: 'rect', width: 80, height: 97, name: 'Dryer', density: 0.003, sprite: 'dryer' },
     { type: 'rect', width: 70, height: 45, name: 'Microwave', density: 0.0015, sprite: 'microwave' },
     // Large furniture
-    { type: 'rect', width: 90, height: 120, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
+    { type: 'rect', width: 106, height: 91, name: 'Upright Piano', density: 0.003, sprite: 'piano' },
     { type: 'rect', width: 140, height: 78, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
     { type: 'rect', width: 65, height: 95, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
     { type: 'rect', width: 45, height: 125, name: 'Grandfather Clock', density: 0.0025, sprite: 'grandfather_clock' },
@@ -42,7 +42,7 @@ const FURNITURE_ITEMS = [
         vertices: [[-0.5,-0.5],[0.5,-0.5],[0.5,0.05],[0.35,0.05],[0.3,0.5],[0.1,0.5],[0.1,0.15],[-0.1,0.15],[-0.1,0.5],[-0.3,0.5],[-0.35,0.05],[-0.5,0.05]] },
     { type: 'polygon', width: 100, height: 60, name: 'Bicycle', density: 0.001, sprite: 'bicycle',
         vertices: [[-0.3,-0.5],[0.35,-0.5],[0.5,-0.1],[0.45,0.5],[0.15,0.3],[-0.15,0.3],[-0.45,0.5],[-0.5,-0.1]] },
-    { type: 'polygon', width: 60, height: 63, name: 'Lawnmower', density: 0.0015, sprite: 'lawnmower',
+    { type: 'polygon', width: 75, height: 56, name: 'Lawnmower', density: 0.0015, sprite: 'lawnmower',
         vertices: [[-0.3,-0.5],[0.2,-0.5],[0.5,0.0],[0.5,0.5],[-0.5,0.5],[-0.5,0.0]] },
     { type: 'polygon', width: 75, height: 56, name: 'Wagon', density: 0.001, sprite: 'wagon',
         vertices: [[-0.5,-0.5],[-0.3,-0.5],[-0.3,-0.1],[0.5,-0.1],[0.5,0.5],[-0.5,0.5]] },
@@ -50,16 +50,16 @@ const FURNITURE_ITEMS = [
     { type: 'polygon', width: 45, height: 60, name: 'Plant', density: 0.001, sprite: 'plant',
         vertices: [[0.0,-0.5],[0.5,-0.1],[0.35,0.1],[0.25,0.1],[0.25,0.5],[-0.25,0.5],[-0.25,0.1],[-0.35,0.1],[-0.5,-0.1]] },
     { type: 'rect', width: 45, height: 70, name: 'Trash Can', density: 0.001, sprite: 'trashcan' },
-    { type: 'rect', width: 45, height: 69, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
-    { type: 'polygon', width: 38, height: 87, name: 'Guitar', density: 0.0008, sprite: 'guitar',
+    { type: 'rect', width: 51, height: 87, name: 'Vacuum', density: 0.001, sprite: 'vacuum' },
+    { type: 'polygon', width: 38, height: 90, name: 'Guitar', density: 0.0008, sprite: 'guitar',
         vertices: [[-0.15,-0.5],[0.15,-0.5],[0.12,-0.1],[0.5,0.15],[0.4,0.5],[-0.4,0.5],[-0.5,0.15],[-0.12,-0.1]] },
     // Boxes & small items
-    { type: 'rect', width: 65, height: 46, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
-    { type: 'rect', width: 50, height: 35, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
-    { type: 'rect', width: 45, height: 37, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
-    { type: 'rect', width: 55, height: 36, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
+    { type: 'rect', width: 65, height: 50, name: 'Large Carton', density: 0.001, sprite: 'large_carton' },
+    { type: 'rect', width: 50, height: 50, name: 'Medium Carton', density: 0.001, sprite: 'medium_carton' },
+    { type: 'rect', width: 45, height: 35, name: 'Small Carton', density: 0.0008, sprite: 'small_carton' },
+    { type: 'rect', width: 50, height: 40, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
     { type: 'rect', width: 65, height: 43, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
-    { type: 'rect', width: 80, height: 52, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
+    { type: 'rect', width: 85, height: 55, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
 ];
 
 // Brand theming configuration
