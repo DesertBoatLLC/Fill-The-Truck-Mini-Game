@@ -8,6 +8,7 @@ const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
 const DEFAULT_RESTITUTION = 0.03; // Very low bounce
 const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
+const SPAWN_Y = -40; // Spawn just above visible area for quick entry
 
 // Furniture items with updated dimensions
 // Items with 'sprite' property will use image sprites instead of textured shapes
@@ -336,7 +337,7 @@ function createFurnitureBody(furnitureItem) {
             // Create triangle using vertices
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: 0, y: height },
                     { x: width / 2, y: 0 },
@@ -357,7 +358,7 @@ function createFurnitureBody(furnitureItem) {
             // Create trapezoid (wider at bottom)
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: width * 0.2, y: 0 },
                     { x: width * 0.8, y: 0 },
@@ -379,7 +380,7 @@ function createFurnitureBody(furnitureItem) {
             // Create L-shaped polygon
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 [
                     { x: 0, y: 0 },
                     { x: width * 0.5, y: 0 },
@@ -412,7 +413,7 @@ function createFurnitureBody(furnitureItem) {
             }
             body = Bodies.fromVertices(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 vertices,
                 {
                     isStatic: false, // Enable physics from spawn for Tetris-style falling
@@ -429,7 +430,7 @@ function createFurnitureBody(furnitureItem) {
             // Rectangle (default)
             body = Bodies.rectangle(
                 spawnX,
-                -100, // Spawn above visible area
+                SPAWN_Y, // Spawn just above visible area
                 width,
                 height,
                 {
