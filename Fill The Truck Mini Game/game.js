@@ -60,6 +60,12 @@ const FURNITURE_ITEMS = [
     { type: 'rect', width: 50, height: 40, name: 'Book Box', density: 0.0015, sprite: 'book_box' },
     { type: 'rect', width: 65, height: 43, name: 'Toolbox', density: 0.001, sprite: 'toolbox' },
     { type: 'rect', width: 85, height: 55, name: 'Storage Tote', density: 0.001, sprite: 'tote' },
+    // Seating furniture
+    { type: 'rect', width: 80, height: 72, name: 'Armchair', density: 0.0015, sprite: 'armchair' },
+    { type: 'rect', width: 155, height: 62, name: 'Couch', density: 0.002, sprite: 'couch' },
+    { type: 'rect', width: 45, height: 80, name: 'Dining Chair', density: 0.001, sprite: 'dining_chair' },
+    { type: 'rect', width: 120, height: 60, name: 'Loveseat', density: 0.0018, sprite: 'loveseat' },
+    { type: 'rect', width: 50, height: 45, name: 'Ottoman', density: 0.001, sprite: 'ottoman' },
 ];
 
 // Brand theming configuration
@@ -200,6 +206,11 @@ function loadSprites() {
         book_box: 'fill_the_truck_assets_individual/sprites/Book Box.png',
         toolbox: 'fill_the_truck_assets_individual/sprites/Small Red Toolbox.png',
         tote: 'fill_the_truck_assets_individual/sprites/Tote_Plastic_Yellow-top.png',
+        armchair: 'fill_the_truck_assets_individual/sprites/armchair_upholstered_tan.png',
+        couch: 'fill_the_truck_assets_individual/sprites/couch_upholstered_tan.png',
+        dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
+        loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
+        ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
     };
 
     let loadedCount = 0;
