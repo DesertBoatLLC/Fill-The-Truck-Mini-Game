@@ -24,8 +24,12 @@ const FURNITURE_ITEMS = [
     { type: 'rect', width: 140, height: 78, name: 'Long Dresser', density: 0.002, sprite: 'long_dresser' },
     { type: 'rect', width: 65, height: 95, name: 'Chest of Drawers', density: 0.002, sprite: 'chest_of_drawers' },
     { type: 'rect', width: 45, height: 125, name: 'Grandfather Clock', density: 0.0025, sprite: 'grandfather_clock' },
-    { type: 'polygon', width: 130, height: 71, name: 'Dining Table', density: 0.002, sprite: 'dining_table',
-        vertices: [[-0.5,-0.5],[0.5,-0.5],[0.4,0.5],[-0.4,0.5]] },
+    { type: 'compound', width: 130, height: 71, name: 'Dining Table', density: 0.002, sprite: 'dining_table',
+        parts: [
+            { shape: 'rect', x: 0, y: -0.38, w: 1.0, h: 0.25 },   // tabletop (full width, top 25%)
+            { shape: 'rect', x: -0.35, y: 0.2, w: 0.1, h: 0.6 },  // left leg
+            { shape: 'rect', x: 0.35, y: 0.2, w: 0.1, h: 0.6 },   // right leg
+        ] },
     { type: 'polygon', width: 85, height: 60, name: 'Coffee Table', density: 0.0015, sprite: 'coffee_table',
         vertices: [[-0.5,-0.5],[0.5,-0.5],[0.45,0.0],[0.3,0.5],[-0.3,0.5],[-0.45,0.0]] },
     // Medium furniture
@@ -427,6 +431,36 @@ function createFurnitureBody(furnitureItem) {
             );
             break;
 
+        case 'compound': {
+            // Compound body from multiple rectangular parts (e.g. table with legs)
+            // Parts are defined with normalized coordinates: x/y relative to center,
+            // w/h as fraction of total width/height
+            const partBodies = furnitureItem.parts.map(p => {
+                return Bodies.rectangle(
+                    spawnX + p.x * width,
+                    SPAWN_Y + p.y * height,
+                    p.w * width,
+                    p.h * height,
+                    {
+                        friction: friction || DEFAULT_FRICTION,
+                        restitution: DEFAULT_RESTITUTION,
+                        density: density || DEFAULT_DENSITY,
+                    }
+                );
+            });
+            body = Body.create({
+                parts: partBodies,
+                isStatic: false,
+                friction: friction || DEFAULT_FRICTION,
+                restitution: DEFAULT_RESTITUTION,
+                sleepThreshold: SLEEP_THRESHOLD,
+                label: type
+            });
+            // Position the compound body at spawn point
+            Body.setPosition(body, { x: spawnX, y: SPAWN_Y });
+            break;
+        }
+
         case 'polygon': {
             // Custom polygon from vertex data — supports concave shapes via poly-decomp
             const scaledVerts = furnitureItem.vertices.map(v => ({
@@ -482,9 +516,9 @@ function createFurnitureBody(furnitureItem) {
     // Attach metadata for rendering
     body.furnitureData = { type, name, width, height, sprite: furnitureItem.sprite };
 
-    // For polygon bodies, calculate offset between center-of-mass and bounding box center
+    // For polygon/compound bodies, calculate offset between center-of-mass and bounding box center
     // so sprites render aligned with the physics shape
-    if (type === 'polygon') {
+    if (type === 'polygon' || type === 'compound') {
         const bcx = (body.bounds.min.x + body.bounds.max.x) / 2;
         const bcy = (body.bounds.min.y + body.bounds.max.y) / 2;
         body.furnitureData.renderOffset = {
