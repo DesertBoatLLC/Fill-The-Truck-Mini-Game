@@ -30,6 +30,7 @@ body {
     padding: 30px;
     max-width: 900px;
     width: 100%;
+    touch-action: manipulation;
 }
 
 .header {
@@ -115,6 +116,7 @@ body {
     border-radius: 8px;
     background: #f0f0f0;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    touch-action: none;
 }
 
 .next-piece-container {
@@ -217,6 +219,7 @@ body {
     transition: transform 0.1s, box-shadow 0.1s;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .control-btn:active {

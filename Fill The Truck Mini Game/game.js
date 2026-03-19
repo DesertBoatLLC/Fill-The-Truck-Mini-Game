@@ -8,7 +8,7 @@ const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
 const DEFAULT_RESTITUTION = 0.03; // Very low bounce
 const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
-const SPAWN_Y = -40; // Spawn just above visible area for quick entry
+const SPAWN_Y = 15; // Spawn just inside top of visible area for instant visibility
 
 // Furniture items — all sprite-based
 // Dimensions are game-world pixels (truck interior is 340px wide)
