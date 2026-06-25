@@ -153,6 +153,29 @@ const BRAND_THEMES = {
         },
         background: "linear-gradient(135deg, #444444 0%, #CC0000 100%)",
         uiAccent: "#CC0000"
+    },
+    // ===== Customer themes =====
+    scobey: {
+        name: "Scobey Moving & Storage",
+        companyName: "Scobey Moving & Storage",
+        truckColors: {
+            doors: "#16653A",   // deep forest green body
+            accent: "#F4F6F9",  // white/silver trim
+            wheels: "#0E3F23"   // darkest green
+        },
+        background: "linear-gradient(135deg, #14512B 0%, #2E9E5B 100%)",
+        uiAccent: "#1B6E3C"     // green for UI accents
+    },
+    central: {
+        name: "Central Transportation Systems",
+        companyName: "Central Transportation Systems",
+        truckColors: {
+            doors: "#14539E",   // royal blue body
+            accent: "#F4F6F9",  // white/silver trim
+            wheels: "#0A3A6B"   // darkest blue
+        },
+        background: "linear-gradient(135deg, #0A3D7A 0%, #2E83D6 100%)",
+        uiAccent: "#1A5FB4"     // blue for UI accents
     }
 };
 
@@ -173,6 +196,52 @@ let isGameOver = false;
 let lastTimestamp = 0;
 let gameLoop = null;
 let isPlayerControlling = true; // True when player has control
+let isFirstSpawn = true; // First item spawns mid-window so it lands quickly
+
+// Analytics: per-session counters reset in restartGame; emitted in fillTheTruck:complete
+let analyticsCounters = {
+    canvasTaps: 0,
+    canvasDrags: 0,
+    canvasSwipes: 0,
+    keypresses: 0,
+    buttonTaps: 0,
+    rotations: 0,
+    manualDrops: 0,
+    autoDrops: 0,
+};
+let firstInputTime = null;       // first user input after gameStart; ms since epoch
+let replayCount = 0;             // number of restarts in this page load
+let lastGameOverReason = null;   // 'coverage_threshold' | 'overflow_ceiling'
+
+function recordInput(source) {
+    if (firstInputTime === null) firstInputTime = Date.now();
+    if (source && source in analyticsCounters) analyticsCounters[source]++;
+}
+
+function postParent(payload) {
+    try { window.parent.postMessage(payload, '*'); }
+    catch (_) { /* cross-origin: ignore */ }
+}
+
+// Tell the embedding page how tall the game is so it can size the iframe.
+// Mobile (stacked layout + touch controls) is much taller than desktop, so a
+// fixed iframe height would clip; the parent listens for this and resizes.
+function postHeight() {
+    const height = Math.max(
+        document.documentElement.scrollHeight,
+        document.body ? document.body.scrollHeight : 0
+    );
+    postParent({ type: 'fillTheTruck:resize', height: height });
+}
+
+function setupAutoResize() {
+    postHeight();
+    if (window.ResizeObserver && document.body) {
+        new ResizeObserver(() => postHeight()).observe(document.body);
+    }
+    window.addEventListener('resize', postHeight);
+    window.addEventListener('orientationchange', () => setTimeout(postHeight, 200));
+}
 
 // Sprite images for all furniture items
 const spriteImages = {};
@@ -274,6 +343,7 @@ function init() {
 
     // Set up mobile touch controls
     setupMobileControls();
+    setupCanvasTouch();
 
     // Add replay button listener
     const replayBtn = document.getElementById('replayBtn');
@@ -546,6 +616,14 @@ function spawnItem() {
     currentBody = createFurnitureBody(furnitureItem);
     isPlayerControlling = true;
 
+    // First item: drop in at the middle of the play window so it lands quickly.
+    // Subsequent items: spawn above the frame and drift down at normal Tetris pace.
+    if (isFirstSpawn) {
+        Body.setPosition(currentBody, { x: currentBody.position.x, y: 380 });
+        isFirstSpawn = false;
+        postParent({ type: 'fillTheTruck:gameStart' });
+    }
+
     // Give item controlled downward velocity for Tetris-style falling (slowed by 20%)
     Body.setVelocity(currentBody, { x: 0, y: 1.2 });
 
@@ -599,6 +677,7 @@ function checkGameOver() {
 
         // Mechanic #2: If any item's top crosses the overflow ceiling, game over immediately
         if (topY < OVERFLOW_CEILING_Y) {
+            lastGameOverReason = 'overflow_ceiling';
             return true;
         }
 
@@ -645,7 +724,11 @@ function checkGameOver() {
     }
 
     // Game over if more than 50% of horizontal space is blocked
-    return totalBlockedWidth > COVERAGE_THRESHOLD;
+    if (totalBlockedWidth > COVERAGE_THRESHOLD) {
+        lastGameOverReason = 'coverage_threshold';
+        return true;
+    }
+    return false;
 }
 
 function moveItem(dx) {
@@ -678,6 +761,8 @@ function rotateItem() {
     if (bounds.min.x < 30 || bounds.max.x > 370) {
         // Revert rotation
         Body.setAngle(currentBody, currentAngle);
+    } else {
+        analyticsCounters.rotations++;
     }
 }
 
@@ -702,6 +787,13 @@ function dropItem() {
     // Disable player control - no more movement after drop
     isPlayerControlling = false;
     itemsPacked++;
+    analyticsCounters.manualDrops++;
+    postParent({
+        type: 'fillTheTruck:itemPacked',
+        itemsPacked: itemsPacked,
+        efficiency: parseInt(document.getElementById('efficiency').textContent, 10) || 0,
+        elapsedSeconds: Math.floor((Date.now() - startTime) / 1000),
+    });
 
     // Spawn next item after a short delay
     setTimeout(() => {
@@ -733,6 +825,13 @@ function autoDrop() {
 
     isPlayerControlling = false;
     itemsPacked++;
+    analyticsCounters.autoDrops++;
+    postParent({
+        type: 'fillTheTruck:itemPacked',
+        itemsPacked: itemsPacked,
+        efficiency: parseInt(document.getElementById('efficiency').textContent, 10) || 0,
+        elapsedSeconds: Math.floor((Date.now() - startTime) / 1000),
+    });
 
     // Spawn next item after a short delay
     setTimeout(() => {
@@ -773,19 +872,23 @@ function handleKeyPress(e) {
 
     switch (e.key) {
         case 'ArrowLeft':
+            recordInput('keypresses');
             moveItem(-10);
             e.preventDefault();
             break;
         case 'ArrowRight':
+            recordInput('keypresses');
             moveItem(10);
             e.preventDefault();
             break;
         case 'ArrowDown':
         case ' ':
+            recordInput('keypresses');
             dropItem();
             e.preventDefault();
             break;
         case 'ArrowUp':
+            recordInput('keypresses');
             rotateItem();
             e.preventDefault();
             break;
@@ -802,6 +905,7 @@ function setupMobileControls() {
     if (leftBtn) {
         leftBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            recordInput('buttonTaps');
             moveItem(-10);
         });
     }
@@ -809,6 +913,7 @@ function setupMobileControls() {
     if (rightBtn) {
         rightBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            recordInput('buttonTaps');
             moveItem(10);
         });
     }
@@ -816,6 +921,7 @@ function setupMobileControls() {
     if (downBtn) {
         downBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            recordInput('buttonTaps');
             dropItem();
         });
     }
@@ -823,9 +929,109 @@ function setupMobileControls() {
     if (rotateBtn) {
         rotateBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            recordInput('buttonTaps');
             rotateItem();
         });
     }
+}
+
+// ==================== CANVAS TOUCH (drag / tap-rotate / swipe-drop) ====================
+function setupCanvasTouch() {
+    if (!canvas) return;
+
+    const TAP_TIME_MS = 250;
+    const TAP_MOVE_PX = 8;        // CSS pixels
+    const SWIPE_TIME_MS = 300;
+    const SWIPE_MIN_DY = 40;      // CSS pixels
+    const SWIPE_AXIS_RATIO = 1.5;
+
+    let active = false;
+    let startX = 0, startY = 0, startT = 0;
+    let lastX = 0, lastY = 0;
+    let maxMove = 0;
+    let dragging = false;
+    let consumed = false;
+
+    function gameXFromClientX(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        return (clientX - rect.left) * scaleX;
+    }
+
+    function snapPieceTo(gameX) {
+        if (!currentBody || !isPlayerControlling || isGameOver) return;
+        const bounds = currentBody.bounds;
+        const halfW = (bounds.max.x - bounds.min.x) / 2;
+        const minX = 30 + halfW;
+        const maxX = 370 - halfW;
+        const clampedX = Math.max(minX, Math.min(maxX, gameX));
+        Body.setPosition(currentBody, { x: clampedX, y: currentBody.position.y });
+        Body.setVelocity(currentBody, { x: 0, y: currentBody.velocity.y });
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (isGameOver || !isPlayerControlling || !currentBody) return;
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        active = true;
+        consumed = false;
+        dragging = false;
+        startX = lastX = t.clientX;
+        startY = lastY = t.clientY;
+        startT = performance.now();
+        maxMove = 0;
+        e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!active || consumed) return;
+        const t = e.touches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxMove) maxMove = dist;
+        lastX = t.clientX;
+        lastY = t.clientY;
+
+        if (!dragging && maxMove > TAP_MOVE_PX) {
+            dragging = true;
+            recordInput('canvasDrags');
+        }
+        if (dragging) snapPieceTo(gameXFromClientX(t.clientX));
+        e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (!active) return;
+        active = false;
+        if (consumed) return;
+
+        const duration = performance.now() - startT;
+        const dx = lastX - startX;
+        const dy = lastY - startY;
+
+        // Swipe-down beats drag classification
+        if (dy > SWIPE_MIN_DY && Math.abs(dy) > Math.abs(dx) * SWIPE_AXIS_RATIO && duration < SWIPE_TIME_MS) {
+            consumed = true;
+            recordInput('canvasSwipes');
+            dropItem();
+            e.preventDefault();
+            return;
+        }
+
+        // Tap → rotate
+        if (!dragging && duration < TAP_TIME_MS && maxMove < TAP_MOVE_PX) {
+            recordInput('canvasTaps');
+            rotateItem();
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchcancel', () => {
+        active = false;
+        dragging = false;
+        consumed = false;
+    });
 }
 
 // ==================== RENDERING ====================
@@ -1120,12 +1326,38 @@ function endGame() {
 
     // Get final stats
     const efficiency = document.getElementById('efficiency').textContent;
+    const efficiencyNum = parseInt(efficiency, 10) || 0;
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
 
     // Show game over overlay
     const overlay = document.getElementById('gameOverOverlay');
     document.getElementById('finalEfficiency').textContent = efficiency;
     document.getElementById('finalItems').textContent = itemsPacked;
     overlay.style.display = 'flex';
+
+    // Notify embedding parent page (no-op when not iframed — posts to self).
+    // Parent listener can read items/efficiency/time and decide what to show
+    // (custom message, discount tier, CTA, etc.) — we don't make offers here.
+    postParent({
+        type: 'fillTheTruck:complete',
+        items: itemsPacked,
+        efficiency: efficiencyNum,
+        timeSeconds: elapsedSeconds,
+        inputBreakdown: {
+            touches: analyticsCounters.canvasTaps + analyticsCounters.canvasDrags + analyticsCounters.canvasSwipes + analyticsCounters.buttonTaps,
+            canvasTaps: analyticsCounters.canvasTaps,
+            canvasDrags: analyticsCounters.canvasDrags,
+            canvasSwipes: analyticsCounters.canvasSwipes,
+            keypresses: analyticsCounters.keypresses,
+            buttonTaps: analyticsCounters.buttonTaps,
+        },
+        rotations: analyticsCounters.rotations,
+        manualDrops: analyticsCounters.manualDrops,
+        autoDrops: analyticsCounters.autoDrops,
+        timeToFirstInputMs: firstInputTime !== null ? (firstInputTime - startTime) : null,
+        gameOverReason: lastGameOverReason,
+        replayCount: replayCount,
+    });
 
     // Hide old message div (if it exists)
     const messageEl = document.getElementById('message');
@@ -1138,6 +1370,7 @@ function startCountdown() {
     const overlay = document.getElementById('countdownOverlay');
     const numberEl = document.getElementById('countdownNumber');
 
+    overlay.classList.remove('banner-mode');
     overlay.style.display = 'flex';
 
     let count = 3;
@@ -1148,28 +1381,32 @@ function startCountdown() {
 
         if (count > 0) {
             numberEl.textContent = count;
-            // Restart animation by removing and re-adding class
-            numberEl.style.animation = 'none';
-            setTimeout(() => {
-                numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
-            }, 10);
-        } else if (count === 0) {
-            numberEl.textContent = 'GO!';
             numberEl.style.animation = 'none';
             setTimeout(() => {
                 numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
             }, 10);
         } else {
-            // Countdown complete - hide overlay and start game
+            // Count hit 0: start gameplay immediately and flash "Fill the Truck!" banner
             clearInterval(countdownInterval);
-            overlay.style.display = 'none';
 
-            // Start actual gameplay
+            startTime = Date.now();
             spawnItem();
             gameLoop = requestAnimationFrame(update);
             timerInterval = setInterval(updateTimer, 1000);
+
+            overlay.classList.add('banner-mode');
+            numberEl.textContent = 'Fill the Truck!';
+            numberEl.style.animation = 'none';
+            setTimeout(() => {
+                numberEl.style.animation = 'countdown-pulse 0.6s ease-in-out forwards';
+            }, 10);
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                overlay.classList.remove('banner-mode');
+            }, 700);
         }
-    }, 1000);  // 1 second intervals
+    }, 1000);
 }
 
 function restartGame() {
@@ -1187,7 +1424,14 @@ function restartGame() {
     itemsPacked = 0;
     isGameOver = false;
     isPlayerControlling = true;
+    isFirstSpawn = true;
     startTime = Date.now();
+
+    // Reset per-session analytics
+    Object.keys(analyticsCounters).forEach(k => analyticsCounters[k] = 0);
+    firstInputTime = null;
+    lastGameOverReason = null;
+    replayCount++;
 
     // Reset UI
     document.getElementById('efficiency').textContent = '0%';
@@ -1220,6 +1464,18 @@ function applyBrandTheme(brandKey) {
 
     currentBrand = brandKey;
 
+    // Show the customer's company name in the header (themes that carry one)
+    const companyEl = document.getElementById('companyName');
+    if (companyEl) {
+        if (theme.companyName) {
+            companyEl.textContent = theme.companyName;
+            companyEl.style.display = 'block';
+        } else {
+            companyEl.textContent = '';
+            companyEl.style.display = 'none';
+        }
+    }
+
     // Save to localStorage
     localStorage.setItem('selectedBrand', brandKey);
 
@@ -1235,6 +1491,9 @@ function loadBrandPreference() {
     const brandParam = urlParams.get('brand');
 
     if (brandParam && BRAND_THEMES[brandParam]) {
+        // Production embed: a brand is pinned via URL, so hide the dev brand picker.
+        const selector = document.getElementById('brandSelector');
+        if (selector) selector.style.display = 'none';
         applyBrandTheme(brandParam);
         return;
     }
@@ -1254,4 +1513,5 @@ function loadBrandPreference() {
 window.addEventListener('load', () => {
     loadBrandPreference();
     init();
+    setupAutoResize();
 });

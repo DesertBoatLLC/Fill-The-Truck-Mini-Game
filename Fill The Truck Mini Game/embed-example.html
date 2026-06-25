@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You — Pioneer Moving Co.</title>
+    <style>
+        :root {
+            --pm-navy: #14365c;
+            --pm-navy-deep: #0c2545;
+            --pm-orange: #e87722;
+            --pm-cream: #f7f3ec;
+            --pm-text: #1a2332;
+            --pm-muted: #5c6b80;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: var(--pm-text);
+            background: var(--pm-cream);
+            line-height: 1.5;
+        }
+
+        /* ---- Top bar ---- */
+        .topbar {
+            background: var(--pm-navy);
+            color: white;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 1.4em;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: var(--pm-orange);
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .topbar nav {
+            display: flex;
+            gap: 22px;
+            font-size: 0.95em;
+        }
+
+        .topbar nav a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.85;
+        }
+
+        .topbar nav a:hover { opacity: 1; }
+
+        .topbar .phone {
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            background: var(--pm-orange);
+            padding: 8px 16px;
+            border-radius: 6px;
+        }
+
+        /* ---- Hero ---- */
+        .hero {
+            text-align: center;
+            padding: 56px 24px 24px;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            color: var(--pm-navy-deep);
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .hero .lede {
+            font-size: 1.2em;
+            color: var(--pm-text);
+            margin-bottom: 18px;
+        }
+
+        .hero .subhead {
+            font-size: 1.05em;
+            color: var(--pm-muted);
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        /* ---- Game frame ---- */
+        .game-wrap {
+            max-width: 940px;
+            margin: 24px auto 48px;
+            padding: 0 16px;
+        }
+
+        .game-frame {
+            width: 100%;
+            height: 880px;
+            border: 0;
+            border-radius: 16px;
+            box-shadow: 0 14px 40px rgba(20, 54, 92, 0.15);
+            background: white;
+            display: block;
+        }
+
+        /* ---- Stats reveal (appears when game completes) ---- */
+        .stats-reveal {
+            max-width: 760px;
+            margin: 0 auto 40px;
+            padding: 28px 32px;
+            background: white;
+            border: 2px solid var(--pm-orange);
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(232, 119, 34, 0.15);
+        }
+
+        .stats-reveal h2 {
+            color: var(--pm-navy-deep);
+            margin-bottom: 8px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 36px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            min-width: 100px;
+        }
+
+        .stat .num {
+            display: block;
+            font-size: 2em;
+            font-weight: 800;
+            color: var(--pm-orange);
+        }
+
+        .stat .label {
+            font-size: 0.85em;
+            color: var(--pm-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ---- Agent block ---- */
+        .agent {
+            max-width: 800px;
+            margin: 0 auto 56px;
+            padding: 32px;
+            display: flex;
+            gap: 28px;
+            align-items: center;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .agent-photo {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--pm-navy), var(--pm-orange));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4em;
+            flex-shrink: 0;
+        }
+
+        .agent h3 {
+            color: var(--pm-navy-deep);
+            margin-bottom: 6px;
+        }
+
+        .agent p {
+            color: var(--pm-muted);
+            margin-bottom: 14px;
+        }
+
+        .agent .cta {
+            display: inline-block;
+            background: var(--pm-orange);
+            color: white;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        /* ---- Footer ---- */
+        footer {
+            background: var(--pm-navy-deep);
+            color: white;
+            padding: 40px 24px 24px;
+        }
+
+        .footer-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 28px;
+        }
+
+        .footer-grid h4 {
+            color: var(--pm-orange);
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .footer-grid p, .footer-grid a {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.92em;
+            text-decoration: none;
+            line-height: 1.7;
+            display: block;
+        }
+
+        .legal {
+            max-width: 1000px;
+            margin: 32px auto 0;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 0.82em;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            .hero h1 { font-size: 2.2em; }
+            .agent { flex-direction: column; text-align: center; }
+            .topbar nav { display: none; }
+            .game-frame { height: 820px; }
+        }
+
+        /* ---- Live Engagement Widget (Sales demo overlay) ---- */
+        .engagement-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 280px;
+            background: rgba(20, 54, 92, 0.97);
+            color: white;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 13px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            z-index: 1000;
+            border: 1px solid rgba(232, 119, 34, 0.4);
+        }
+
+        .engagement-widget h4 {
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--pm-orange);
+            margin-bottom: 4px;
+        }
+
+        .engagement-widget .demo-tag {
+            font-size: 0.7em;
+            opacity: 0.6;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .engagement-widget .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .engagement-widget .metric-row:last-child { border-bottom: 0; }
+
+        .engagement-widget .metric-label {
+            font-size: 0.85em;
+            opacity: 0.85;
+        }
+
+        .engagement-widget .metric-value {
+            font-weight: 700;
+            color: white;
+        }
+
+        .engagement-widget .metric-value.highlight {
+            color: var(--pm-orange);
+            font-size: 1.05em;
+        }
+
+        .engagement-widget .last-completion {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.2);
+            font-size: 0.82em;
+            opacity: 0.9;
+        }
+
+        .engagement-widget .last-completion strong { color: var(--pm-orange); }
+
+        .engagement-widget .toggle {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: none;
+            border: 0;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 4px;
+        }
+
+        .engagement-widget.collapsed .widget-body { display: none; }
+        .engagement-widget.collapsed { width: auto; padding: 8px 14px; }
+
+        @media (max-width: 700px) {
+            .engagement-widget {
+                bottom: 12px;
+                right: 12px;
+                left: 12px;
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="topbar">
+        <div class="logo">
+            <span class="logo-mark">🚛</span>
+            Pioneer Moving Co.
+        </div>
+        <nav>
+            <a href="#">Residential</a>
+            <a href="#">Commercial</a>
+            <a href="#">Storage</a>
+            <a href="#">About</a>
+        </nav>
+        <a href="tel:5551234567" class="phone">(555) 123-4567</a>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>THANK YOU!</h1>
+            <p class="lede">We've got your info — your free quote is on its way.</p>
+            <p class="subhead">While you wait, try your hand at filling the truck. Leave as little space as possible.</p>
+        </section>
+
+        <section class="game-wrap">
+            <iframe
+                src="index.html"
+                class="game-frame"
+                title="Fill The Truck game"
+                loading="lazy"
+                allow="autoplay">
+            </iframe>
+        </section>
+
+        <section id="statsReveal" class="stats-reveal" hidden>
+            <h2>Nice run!</h2>
+            <p>Here's how you packed:</p>
+            <div class="stats-row">
+                <div class="stat">
+                    <span class="num" id="statItems">0</span>
+                    <span class="label">Items packed</span>
+                </div>
+                <div class="stat">
+                    <span class="num" id="statEfficiency">0%</span>
+                    <span class="label">Space efficiency</span>
+                </div>
+                <div class="stat">
+                    <span class="num" id="statTime">0s</span>
+                    <span class="label">Time</span>
+                </div>
+            </div>
+            <!--
+              CUSTOMIZATION HOOK FOR YOUR CUSTOMERS
+              ------------------------------------
+              The customer can swap or extend this block to do whatever they like
+              with the player's score. Examples:
+
+                if (data.efficiency >= 80) showCode('PACK20');
+                else if (data.efficiency >= 60) showCode('PACK10');
+
+              We don't bake an offer into the iframe itself — the customer owns
+              the conversion message and the discount math. We just hand them
+              the numbers via the postMessage event.
+            -->
+        </section>
+
+        <section class="agent">
+            <div class="agent-photo">👋</div>
+            <div>
+                <h3>I'm Sam — your move coordinator</h3>
+                <p>The details of your move matter, and I'd like to have a conversation about how we can make moving day a great day.</p>
+                <a href="tel:5551234567" class="cta">Call me directly: (555) 123-4567</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-grid">
+            <div>
+                <h4>Austin Office</h4>
+                <p>123 Main Street<br>Austin, TX 78701</p>
+            </div>
+            <div>
+                <h4>Dallas Office</h4>
+                <p>456 Oak Avenue<br>Dallas, TX 75201</p>
+            </div>
+            <div>
+                <h4>Houston Office</h4>
+                <p>789 Pine Road<br>Houston, TX 77002</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <a href="#">Moving Checklist</a>
+                <a href="#">Service Areas</a>
+                <a href="#">Claims</a>
+                <a href="#">Careers</a>
+            </div>
+        </div>
+        <p class="legal">© Pioneer Moving Co. — Demo page. Drop your branding in to make it your own.</p>
+    </footer>
+
+    <!-- Sales-demo engagement widget. Strip this whole block before shipping to a real customer site. -->
+    <aside id="engagementWidget" class="engagement-widget">
+        <button class="toggle" id="widgetToggle" aria-label="Collapse">−</button>
+        <div class="widget-body">
+            <h4>Live Engagement</h4>
+            <span class="demo-tag">Sales demo overlay — remove for production</span>
+            <div class="metric-row">
+                <span class="metric-label">Time on page</span>
+                <span class="metric-value highlight" id="widgetPageTime">0s</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Items packed (run)</span>
+                <span class="metric-value" id="widgetItemsRun">0</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Completed runs</span>
+                <span class="metric-value" id="widgetCompletedRuns">0</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Replays</span>
+                <span class="metric-value" id="widgetReplays">0</span>
+            </div>
+            <div class="last-completion" id="widgetLastRow" hidden>
+                Last run: <strong id="widgetLastItems">0</strong> items,
+                <strong id="widgetLastEfficiency">0%</strong> efficiency,
+                <strong id="widgetLastTime">0s</strong>,
+                <strong id="widgetLastInputs">0</strong> inputs
+                <div id="widgetInputBreakdown" style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;"></div>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        // ---- Page-level analytics for sales demo ----
+        const pageLoadTime = Date.now();
+        let completedRuns = 0;
+        let replaysSeen = 0;
+        let gameStartsSeen = 0;
+
+        const $ = (id) => document.getElementById(id);
+
+        // Live ticker: time on page (this is the customer's headline KPI)
+        setInterval(() => {
+            const seconds = Math.floor((Date.now() - pageLoadTime) / 1000);
+            $('widgetPageTime').textContent = seconds + 's';
+        }, 1000);
+
+        // Collapse/expand the widget
+        $('widgetToggle').addEventListener('click', () => {
+            const w = $('engagementWidget');
+            const collapsed = w.classList.toggle('collapsed');
+            $('widgetToggle').textContent = collapsed ? '+' : '−';
+        });
+
+        // ---- Listen for the game's postMessage events ----
+        // PRODUCTION NOTE for customers: replace '*' below with your game-host origin
+        // (e.g. 'https://fill-the-truck.your-domain.com') for stricter security.
+        window.addEventListener('message', (event) => {
+            // if (event.origin !== 'https://your-game-host.example') return;
+            const data = event.data;
+            if (!data || typeof data.type !== 'string' || !data.type.startsWith('fillTheTruck:')) return;
+
+            if (data.type === 'fillTheTruck:gameStart') {
+                gameStartsSeen++;
+                if (gameStartsSeen > 1) {
+                    replaysSeen++;
+                    $('widgetReplays').textContent = replaysSeen;
+                }
+                $('widgetItemsRun').textContent = '0';
+            }
+
+            if (data.type === 'fillTheTruck:itemPacked') {
+                $('widgetItemsRun').textContent = data.itemsPacked ?? 0;
+            }
+
+            if (data.type === 'fillTheTruck:complete') {
+                completedRuns++;
+                $('widgetCompletedRuns').textContent = completedRuns;
+
+                const inputs = data.inputBreakdown || {};
+                const totalInputs = (inputs.touches ?? 0) + (inputs.keypresses ?? 0);
+
+                $('widgetLastItems').textContent = data.items ?? 0;
+                $('widgetLastEfficiency').textContent = (data.efficiency ?? 0) + '%';
+                $('widgetLastTime').textContent = (data.timeSeconds ?? 0) + 's';
+                $('widgetLastInputs').textContent = totalInputs;
+
+                const breakdown = [];
+                if (inputs.canvasDrags) breakdown.push(inputs.canvasDrags + ' drags');
+                if (inputs.canvasTaps) breakdown.push(inputs.canvasTaps + ' taps');
+                if (inputs.canvasSwipes) breakdown.push(inputs.canvasSwipes + ' swipes');
+                if (inputs.buttonTaps) breakdown.push(inputs.buttonTaps + ' button taps');
+                if (inputs.keypresses) breakdown.push(inputs.keypresses + ' keys');
+                $('widgetInputBreakdown').textContent = breakdown.length ? breakdown.join(' · ') : '';
+                $('widgetLastRow').hidden = false;
+
+                // Update the customer-visible stats card (same data, different UI)
+                $('statItems').textContent = data.items ?? 0;
+                $('statEfficiency').textContent = (data.efficiency ?? 0) + '%';
+                $('statTime').textContent = (data.timeSeconds ?? 0) + 's';
+                const reveal = $('statsReveal');
+                reveal.hidden = false;
+                reveal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+
+</body>
+</html>

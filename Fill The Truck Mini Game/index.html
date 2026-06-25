@@ -4,16 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fill The Truck - Moving Game</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260625b">
 </head>
 <body>
     <div class="game-container">
         <div class="header">
+            <p class="company-name" id="companyName" style="display: none;"></p>
             <h1>🚚 Fill The Truck!</h1>
             <p class="subtitle">Pack efficiently while we review your request</p>
-            <div class="brand-selector">
+            <div class="brand-selector" id="brandSelector">
                 <label for="brandSelect">Theme: </label>
                 <select id="brandSelect">
+                    <option value="scobey">Scobey Moving &amp; Storage</option>
+                    <option value="central">Central Transportation Systems</option>
                     <option value="americanMover">American Mover</option>
                     <option value="moverCo">MoverCo</option>
                     <option value="quickHaul">QuickHaul</option>
@@ -97,6 +100,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/build/decomp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="game.js"></script>
+    <script src="game.js?v=20260625b"></script>
 </body>
 </html>

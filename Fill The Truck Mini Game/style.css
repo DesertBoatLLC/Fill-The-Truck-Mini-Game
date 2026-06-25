@@ -49,6 +49,16 @@ body {
     font-size: 1.1em;
 }
 
+/* Customer company name (shown when a branded theme is active) */
+.company-name {
+    color: var(--brand-primary);
+    font-size: 1.05em;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
 .brand-selector {
     margin-top: 15px;
     font-size: 0.9em;
@@ -372,6 +382,16 @@ body {
     color: white;
     text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
     animation: countdown-pulse 1s ease-in-out;
+}
+
+.countdown-overlay.banner-mode {
+    background: transparent;
+    pointer-events: none;
+}
+
+.countdown-overlay.banner-mode .countdown-number {
+    font-size: 56px;
+    text-shadow: 0 0 24px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 255, 255, 0.6);
 }
 
 @keyframes countdown-pulse {

@@ -1,0 +1,64 @@
+<!-- ============================================================================
+     FILL THE TRUCK  —  Scobey Moving & Storage
+     ----------------------------------------------------------------------------
+     Paste this entire block into the page where the game should appear.
+     It works inside any HTML / "Custom HTML" / "Embed Code" block
+     (WordPress, Squarespace, Wix, Webflow, HubSpot, raw HTML, etc.).
+
+     Ready to use as-is — no edits required. The iframe auto-resizes, so it
+     will never clip the on-screen controls on phones or desktops.
+     ============================================================================ -->
+
+<div class="ftt-embed">
+  <iframe
+    id="ftt-frame-scobey"
+    class="ftt-embed__frame"
+    src="https://fillthetruckminigame.netlify.app/index.html?brand=scobey"
+    title="Fill The Truck — Scobey Moving & Storage"
+    loading="lazy"
+    allow="autoplay"
+    scrolling="no"></iframe>
+</div>
+
+<style>
+  .ftt-embed { max-width: 960px; margin: 0 auto; padding: 0 12px; }
+  .ftt-embed__frame {
+    width: 100%;
+    height: 920px;            /* starting height; auto-adjusts as the game loads */
+    border: 0;
+    border-radius: 16px;
+    box-shadow: 0 14px 40px rgba(20, 81, 43, 0.18);
+    background: #fff;
+    display: block;
+  }
+</style>
+
+<script>
+  (function () {
+    window.addEventListener('message', function (e) {
+      var d = e.data;
+      if (!d || typeof d.type !== 'string') return;
+
+      // Keep the iframe exactly as tall as the game needs (no clipping/scrollbars).
+      if (d.type === 'fillTheTruck:resize' && d.height) {
+        var f = document.getElementById('ftt-frame-scobey');
+        if (f) f.style.height = d.height + 'px';
+      }
+
+      // OPTIONAL — fires when a visitor finishes a round.
+      // d.items, d.efficiency (0-100) and d.timeSeconds are available here.
+      // Wire your own analytics / conversion tracking below, or delete this.
+      if (d.type === 'fillTheTruck:complete') {
+        // Example (Google Analytics / GTM):
+        // window.dataLayer = window.dataLayer || [];
+        // window.dataLayer.push({
+        //   event: 'fill_the_truck_complete',
+        //   ftt_items: d.items,
+        //   ftt_efficiency: d.efficiency,
+        //   ftt_time_seconds: d.timeSeconds
+        // });
+        console.log('Fill The Truck completed:', d);
+      }
+    });
+  })();
+</script>
