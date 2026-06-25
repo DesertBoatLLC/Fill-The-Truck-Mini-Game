@@ -1042,7 +1042,6 @@ function drawTruckFrame(context) {
     const doorWidth = 30; // Width of each door
     const doorColor = theme.truckColors.doors;
     const accentColor = theme.truckColors.accent;
-    const wheelColor = theme.truckColors.wheels;
 
     // Undercarriage fill (behind everything - fills gaps)
     context.fillStyle = '#444444';
@@ -1143,17 +1142,22 @@ function drawTruckFrame(context) {
         context.roundRect(-wheelWidth/2, -wheelHeight/2, wheelWidth, wheelHeight, cornerRadius);
         context.fill();
 
-        // Wheel rim/hub (brand color) - smaller rounded rectangle
+        // Wheel hub (neutral gunmetal hubcap — deliberately NOT the brand color,
+        // a colored tire center reads as a mistake)
         const rimWidth = wheelWidth * 0.6;
         const rimHeight = wheelHeight * 0.7;
         const rimRadius = 5;
-        context.fillStyle = wheelColor;
+        const hubGradient = context.createLinearGradient(0, -rimHeight / 2, 0, rimHeight / 2);
+        hubGradient.addColorStop(0, '#5a5a5a');
+        hubGradient.addColorStop(0.5, '#333333');
+        hubGradient.addColorStop(1, '#5a5a5a');
+        context.fillStyle = hubGradient;
         context.beginPath();
         context.roundRect(-rimWidth/2, -rimHeight/2, rimWidth, rimHeight, rimRadius);
         context.fill();
 
         // Rim details (horizontal line in center for tread pattern)
-        context.strokeStyle = '#444';
+        context.strokeStyle = '#6a6a6a';
         context.lineWidth = 2;
         context.beginPath();
         context.moveTo(-wheelWidth/2 + 2, 0);
