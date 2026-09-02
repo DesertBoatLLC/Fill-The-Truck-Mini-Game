@@ -46,6 +46,26 @@ const DEDICATED_DAMAGE = {
     ],
 };
 
+const ITEM_MATERIAL = {
+    fridge: 'metal', washer: 'metal', dryer: 'metal', microwave: 'metal',
+    lawnmower: 'metal', wagon: 'metal', floor_lamp: 'metal', toolbox: 'metal',
+    trashcan: 'metal', vacuum: 'metal', bicycle: 'metal', bbq: 'metal',
+    armchair: 'upholstery', couch: 'upholstery', loveseat: 'upholstery', ottoman: 'upholstery',
+    piano: 'wood', long_dresser: 'wood', chest_of_drawers: 'wood', grandfather_clock: 'wood',
+    dining_table: 'wood', coffee_table: 'wood', nightstand: 'wood', bar_stool: 'wood',
+    dining_chair: 'wood', guitar: 'wood',
+    large_carton: 'carton', medium_carton: 'carton', small_carton: 'carton',
+    book_box: 'carton', tote: 'carton',
+    plant: 'plant',
+};
+
+const MARK_INFO = {
+    tear: { price: 95, label: 'Torn upholstery' },
+    scratch: { price: 45, label: 'Scratched wood' },
+    nick: { price: 20, label: 'Nicked wood' },
+    woodcrack: { price: 120, label: 'Cracked wood' },
+};
+
 function rootBody(body) {
     if (!body) return null;
     let root = body;
@@ -107,17 +127,49 @@ function imageForFurniture(fd) {
     return spriteImages[fd.baseSprite] || null;
 }
 
-function applyDamage(body, reason) {
+function materialOf(body) {
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return 'other';
+    return body.furnitureData.material || ITEM_MATERIAL[body.furnitureData.baseSprite] || 'other';
+}
+
+function applyDamage(body, reason, kind) {
     if (packMode !== PACK_DIY || isGameOver) return false;
     body = rootBody(body);
     if (!body || !body.furnitureData) return false;
-    const stage = nextDamageStage(body);
-    if (!stage) return false;
-    body.furnitureData.stageIndex = (body.furnitureData.stageIndex || 0) + 1;
-    body.furnitureData.damageState = stage.state;
-    body.furnitureData.damageReason = reason;
-    if (stage.sprite && spriteImages[stage.sprite]) {
-        body.furnitureData.sprite = stage.sprite;
+    const fd = body.furnitureData;
+    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || !kind);
+    const profile = getDamageProfile(body);
+    const stage = dedicatedKind ? nextDamageStage(body) : null;
+
+    if (kind === 'crush' && profile && fd.baseSprite.indexOf('carton') !== -1 && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if (kind === 'crack' && profile && fd.baseSprite === 'dining_table' && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if ((kind === 'dump' || !kind) && profile && fd.baseSprite === 'plant' && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+    } else if (kind && MARK_INFO[kind]) {
+        if (fd.mark === kind || (kind === 'nick' && (fd.mark === 'scratch' || fd.mark === 'woodcrack'))) return false;
+        if (kind === 'scratch' && fd.mark === 'woodcrack') return false;
+        fd.mark = kind;
+        fd.damageState = kind;
+        fd.damageReason = reason;
+        const info = MARK_INFO[kind];
+        fd.markPrice = info.price;
+        fd.markLabel = info.label.replace(/wood|upholstery/i, (fd.name || 'item').toLowerCase());
+    } else {
+        return false;
     }
     pinDamageVisual(body);
     updateDamageMeter();
@@ -128,15 +180,23 @@ function collectDamageBill() {
     const lines = [];
     let total = 0;
     if (!world) return { lines, total };
+    const seen = new Set();
     for (const body of world.bodies) {
         if (!body.furnitureData) continue;
-        const profile = getDamageProfile(body);
-        if (!profile) continue;
-        const idx = body.furnitureData.stageIndex || 0;
-        if (idx <= 0) continue;
-        const stage = profile.stages[Math.min(idx, profile.stages.length) - 1];
-        lines.push({ label: stage.label, price: stage.price, reason: body.furnitureData.damageReason });
-        total += stage.price;
+        const root = rootBody(body);
+        if (seen.has(root)) continue;
+        seen.add(root);
+        const fd = root.furnitureData;
+        const profile = getDamageProfile(root);
+        const idx = fd.stageIndex || 0;
+        if (profile && idx > 0) {
+            const stage = profile.stages[Math.min(idx, profile.stages.length) - 1];
+            lines.push({ label: stage.label, price: stage.price, reason: fd.damageReason });
+            total += stage.price;
+        } else if (fd.mark && fd.markPrice) {
+            lines.push({ label: fd.markLabel || MARK_INFO[fd.mark].label, price: fd.markPrice, reason: fd.damageReason });
+            total += fd.markPrice;
+        }
     }
     return { lines, total };
 }
@@ -224,19 +284,40 @@ function rollDamage(stage, speed, massOn, otherMass) {
     return Math.random() < Math.min(0.72, chance);
 }
 
+function pairingFor(victim, other, speed) {
+    const vm = materialOf(victim);
+    const om = materialOf(other);
+    const otherMass = other.mass || 0;
+    const massOn = massStackedOn(victim);
+    if (vm === 'carton') {
+        return { kind: 'crush', chance: massOn >= 1 ? 0.48 : 0.035 };
+    }
+    if (vm === 'upholstery' && om === 'metal') {
+        return { kind: 'tear', chance: 0.32 + Math.min(0.22, otherMass / 18) };
+    }
+    if (vm === 'wood' && om === 'carton') {
+        return { kind: 'nick', chance: 0.07 };
+    }
+    if (vm === 'wood' && om === 'metal') {
+        const heavyFast = otherMass >= 7 && speed >= 2.2;
+        if (heavyFast) return { kind: victim.furnitureData.baseSprite === 'dining_table' ? 'crack' : 'woodcrack', chance: 0.3 + Math.min(0.22, speed / 9) };
+        return { kind: 'scratch', chance: 0.16 };
+    }
+    if (vm === 'wood' && om === 'wood') {
+        return { kind: 'nick', chance: 0.09 };
+    }
+    return null;
+}
+
 function considerImpact(victim, other) {
     victim = rootBody(victim);
     other = rootBody(other);
-    const profile = getDamageProfile(victim);
-    const stage = nextDamageStage(victim);
-    if (!profile || !stage || !other || other.isStatic) return;
+    if (!victim || !other || other.isStatic || victim === other) return;
     const rel = Matter.Vector.sub(victim.velocity, other.velocity);
     const speed = Matter.Vector.magnitude(rel);
-    const otherMass = other.mass || 0;
-    const massOn = massStackedOn(victim);
-    if (rollDamage(stage, speed, massOn, otherMass)) {
-        applyDamage(victim, 'impact');
-    }
+    const hit = pairingFor(victim, other, speed);
+    if (!hit) return;
+    if (Math.random() < hit.chance) applyDamage(victim, 'impact', hit.kind);
 }
 
 function setupDamageCollisions() {
@@ -254,22 +335,29 @@ function checkStackedWeightAndTilt() {
     const bodies = world.bodies.filter(b => !b.isStatic && b.furnitureData);
     for (const victim of bodies) {
         const profile = getDamageProfile(victim);
-        const stage = nextDamageStage(victim);
-        if (!profile || !stage) continue;
-
-        if (profile.dumpIfInverted) {
+        if (profile && profile.dumpIfInverted) {
             const a = ((victim.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
             if (a > 1.15 && a < (Math.PI * 2 - 1.15)) {
-                applyDamage(victim, 'inverted');
+                applyDamage(victim, 'inverted', 'dump');
                 continue;
             }
         }
 
         const massOn = massStackedOn(victim);
-        const stackRatio = stage.stackMass > 0 ? massOn / stage.stackMass : 0;
-        if (stackRatio >= 0.4) {
-            const tickChance = Math.min(0.12, 0.015 + 0.03 * stackRatio);
-            if (Math.random() < tickChance) applyDamage(victim, 'crush');
+        const vm = materialOf(victim);
+        if (vm === 'carton' && massOn >= 1) {
+            if (Math.random() < 0.2) applyDamage(victim, 'crush', 'crush');
+            continue;
+        }
+        if (vm === 'upholstery' && massOn >= 2) {
+            let metalOn = false;
+            for (const other of bodies) {
+                if (other === victim) continue;
+                const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+                const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+                if (overlapX && restingOn && materialOf(other) === 'metal') metalOn = true;
+            }
+            if (metalOn && Math.random() < 0.14) applyDamage(victim, 'crush', 'tear');
         }
     }
 }
@@ -367,6 +455,62 @@ function getOpaqueCrop(img) {
 function drawSpriteAtBodySize(context, img, dx, dy, dw, dh) {
     const crop = getOpaqueCrop(img);
     context.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
+}
+
+function stampMaterialMark(context, w, h, kind) {
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, w, h);
+    context.clip();
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    if (kind === 'tear') {
+        context.strokeStyle = 'rgba(70, 42, 32, 0.8)';
+        context.lineWidth = Math.max(1.2, Math.min(w, h) * 0.035);
+        const x = w * 0.38, y = h * 0.32, s = Math.min(w, h) * 0.22;
+        context.beginPath();
+        context.moveTo(x, y);
+        context.quadraticCurveTo(x + s * 0.3, y + s * 0.5, x - s * 0.1, y + s);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x + s * 0.45, y + s * 0.1);
+        context.quadraticCurveTo(x + s * 0.7, y + s * 0.55, x + s * 0.2, y + s * 0.95);
+        context.stroke();
+        context.strokeStyle = 'rgba(210, 190, 170, 0.55)';
+        context.lineWidth = 0.8;
+        context.beginPath();
+        context.moveTo(x + 1, y + 2);
+        context.quadraticCurveTo(x + s * 0.3, y + s * 0.5, x, y + s - 2);
+        context.stroke();
+    } else if (kind === 'scratch') {
+        context.strokeStyle = 'rgba(230, 214, 180, 0.75)';
+        context.lineWidth = 1.1;
+        context.beginPath();
+        context.moveTo(w * 0.22, h * 0.28);
+        context.lineTo(w * 0.7, h * 0.4);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(w * 0.3, h * 0.36);
+        context.lineTo(w * 0.62, h * 0.46);
+        context.stroke();
+    } else if (kind === 'woodcrack') {
+        context.strokeStyle = 'rgba(40, 24, 12, 0.8)';
+        context.lineWidth = 1.6;
+        context.beginPath();
+        context.moveTo(w * 0.45, h * 0.18);
+        context.lineTo(w * 0.52, h * 0.48);
+        context.lineTo(w * 0.47, h * 0.78);
+        context.stroke();
+    } else if (kind === 'nick') {
+        context.fillStyle = 'rgba(40, 24, 12, 0.7)';
+        context.beginPath();
+        context.moveTo(w * 0.78, h * 0.18);
+        context.lineTo(w * 0.86, h * 0.22);
+        context.lineTo(w * 0.8, h * 0.28);
+        context.closePath();
+        context.fill();
+    }
+    context.restore();
 }
 
 const wrapCache = new WeakMap();
@@ -1040,9 +1184,10 @@ function createFurnitureBody(furnitureItem) {
         height,
         sprite: furnitureItem.sprite,
         baseSprite: furnitureItem.sprite,
+        material: ITEM_MATERIAL[furnitureItem.sprite] || 'other',
         stageIndex: 0,
         damageState: 'intact',
-        overlayLevel: 0,
+        mark: null,
     };
 
     // For polygon/compound bodies, calculate offset between center-of-mass and bounding box center
@@ -1752,6 +1897,12 @@ function drawFurnitureBody(context, body) {
         context.font = '8px sans-serif';
         context.textAlign = 'center';
         context.fillText(name, ox, 3 + oy);
+    }
+    if (packMode === PACK_DIY && body.furnitureData.mark) {
+        context.save();
+        context.translate(destX, destY);
+        stampMaterialMark(context, width, height, body.furnitureData.mark);
+        context.restore();
     }
 
     context.restore();
