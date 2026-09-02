@@ -3,7 +3,7 @@ const TRUCK_WIDTH = 400;
 const TRUCK_HEIGHT = 600;
 
 // Physics constants
-const WORLD_GRAVITY = 0.147; // Reduced by 60% total for graceful, more visible drops
+const WORLD_GRAVITY = 0.26; // Snappier fall so first piece hits the well quickly
 const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
 const DEFAULT_RESTITUTION = 0.03; // Very low bounce
 const DEFAULT_DENSITY = 0.001; // Base density
@@ -18,39 +18,48 @@ const PACK_MOVERS = 'movers';
 let packMode = PACK_DIY;
 let stackCheckFrame = 0;
 
-const DAMAGE_ITEMS = {
-    dining_table: {
-        dumpIfInverted: false,
-        stages: [
-            { state: 'cracked', sprite: 'dining_table_cracked', speed: 3.2, stackMass: 8, price: 180, label: 'Cracked dining table' },
-        ],
-    },
-    large_carton: {
-        stages: [
-            { state: 'crushed', sprite: 'large_carton_crushed', speed: 2.2, stackMass: 5, price: 40, label: 'Crushed large carton' },
-        ],
-    },
-    medium_carton: {
-        stages: [
-            { state: 'crushed', sprite: 'medium_carton_crushed', speed: 1.9, stackMass: 4, price: 25, label: 'Crushed medium carton' },
-        ],
-    },
-    small_carton: {
-        stages: [
-            { state: 'crushed', sprite: 'small_carton_crushed', speed: 1.6, stackMass: 3, price: 15, label: 'Crushed small carton' },
-        ],
-    },
-    plant: {
-        dumpIfInverted: true,
-        stages: [
-            { state: 'dumped', sprite: 'plant_dumped', speed: 2.0, stackMass: 4, price: 65, label: 'Dumped plant' },
-        ],
-    },
+const MOVERS_GRID = 16;
+const SPAWN_DELAY_MS = 280;
+const FIRST_SPAWN_Y = 55;
+const FIRST_FALL_VY = 4.0;
+const FALL_VY = 2.8;
+
+const DEDICATED_DAMAGE = {
+    dining_table: [
+        { state: 'cracked', sprite: 'dining_table_cracked', speed: 3.2, stackMass: 8, price: 180, label: 'Cracked dining table' },
+        { state: 'broken', sprite: 'dining_table_broken', speed: 6.0, stackMass: 16, price: 450, label: 'Broken dining table' },
+    ],
+    large_carton: [
+        { state: 'crushed', sprite: 'large_carton_crushed', speed: 2.2, stackMass: 5, price: 40, label: 'Crushed large carton' },
+        { state: 'pancaked', sprite: 'large_carton_pancaked', speed: 4.0, stackMass: 9, price: 75, label: 'Pancaked large carton' },
+    ],
+    medium_carton: [
+        { state: 'crushed', sprite: 'medium_carton_crushed', speed: 1.9, stackMass: 4, price: 25, label: 'Crushed medium carton' },
+        { state: 'pancaked', sprite: 'medium_carton_pancaked', speed: 3.6, stackMass: 7, price: 50, label: 'Pancaked medium carton' },
+    ],
+    small_carton: [
+        { state: 'crushed', sprite: 'small_carton_crushed', speed: 1.6, stackMass: 3, price: 15, label: 'Crushed small carton' },
+        { state: 'pancaked', sprite: 'small_carton_pancaked', speed: 3.2, stackMass: 6, price: 30, label: 'Pancaked small carton' },
+    ],
+    plant: [
+        { state: 'dumped', sprite: 'plant_dumped', speed: 2.0, stackMass: 4, price: 65, label: 'Dumped plant' },
+        { state: 'smashed', sprite: 'plant_smashed', speed: 3.8, stackMass: 8, price: 110, label: 'Smashed plant' },
+    ],
 };
 
+function genericStages(name) {
+    const n = (name || 'item').toLowerCase();
+    return [
+        { state: 'damaged', sprite: null, overlay: 1, speed: 3.0, stackMass: 7, price: 55, label: 'Damaged ' + n },
+        { state: 'wrecked', sprite: null, overlay: 2, speed: 5.5, stackMass: 13, price: 120, label: 'Wrecked ' + n },
+    ];
+}
 function getDamageProfile(body) {
     if (!body || !body.furnitureData) return null;
-    return DAMAGE_ITEMS[body.furnitureData.baseSprite] || null;
+    const key = body.furnitureData.baseSprite;
+    const dedicated = DEDICATED_DAMAGE[key];
+    if (dedicated) return { dumpIfInverted: key === 'plant', stages: dedicated };
+    return { dumpIfInverted: false, stages: genericStages(body.furnitureData.name) };
 }
 
 function nextDamageStage(body) {
@@ -67,8 +76,12 @@ function applyDamage(body, reason) {
     if (!stage) return false;
     body.furnitureData.stageIndex = (body.furnitureData.stageIndex || 0) + 1;
     body.furnitureData.damageState = stage.state;
-    body.furnitureData.sprite = stage.sprite;
     body.furnitureData.damageReason = reason;
+    if (stage.sprite && spriteImages[stage.sprite]) {
+        body.furnitureData.sprite = stage.sprite;
+    } else {
+        body.furnitureData.overlayLevel = stage.overlay || body.furnitureData.stageIndex;
+    }
     updateDamageMeter();
     return true;
 }
@@ -231,6 +244,122 @@ function renderDamageBill() {
             : "Don't try to load the truck yourself, leave that to us.<br>A member of our team will reach out to you shortly.";
     }
     return { ...bill, mode: packMode };
+}
+
+const opaqueCropCache = new WeakMap();
+
+function getOpaqueCrop(img) {
+    const cached = opaqueCropCache.get(img);
+    if (cached) return cached;
+    try {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0);
+        const data = g.getImageData(0, 0, w, h).data;
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        let found = false;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const a = data[(y * w + x) * 4 + 3];
+                if (a > 16) {
+                    found = true;
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        const crop = found
+            ? { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+            : { sx: 0, sy: 0, sw: w, sh: h };
+        opaqueCropCache.set(img, crop);
+        return crop;
+    } catch (err) {
+        const crop = {
+            sx: 0,
+            sy: 0,
+            sw: img.naturalWidth || img.width || 1,
+            sh: img.naturalHeight || img.height || 1
+        };
+        opaqueCropCache.set(img, crop);
+        return crop;
+    }
+}
+
+function drawSpriteAtBodySize(context, img, dx, dy, dw, dh) {
+    const crop = getOpaqueCrop(img);
+    context.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
+}
+
+function stampDamageOverlay(context, w, h, level) {
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, w, h);
+    context.clip();
+    const heavy = level >= 2;
+    context.fillStyle = heavy ? 'rgba(90, 40, 10, 0.32)' : 'rgba(90, 40, 10, 0.18)';
+    context.fillRect(0, 0, w, h);
+    context.strokeStyle = heavy ? 'rgba(40, 20, 10, 0.85)' : 'rgba(40, 20, 10, 0.55)';
+    context.lineWidth = heavy ? 2.2 : 1.4;
+    context.beginPath();
+    context.moveTo(w * 0.12, h * 0.18);
+    context.lineTo(w * 0.38, h * 0.42);
+    context.lineTo(w * 0.28, h * 0.72);
+    context.moveTo(w * 0.55, h * 0.12);
+    context.lineTo(w * 0.72, h * 0.48);
+    context.lineTo(w * 0.88, h * 0.35);
+    if (heavy) {
+        context.moveTo(w * 0.18, h * 0.55);
+        context.lineTo(w * 0.62, h * 0.82);
+        context.moveTo(w * 0.42, h * 0.22);
+        context.lineTo(w * 0.85, h * 0.68);
+    }
+    context.stroke();
+    context.restore();
+}
+
+function stampMoversWrap(context, w, h, name) {
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, w, h);
+    context.clip();
+    const boxed = /plant|guitar|lamp|toolbox|tote|carton|box|microwave|vacuum|trash/i.test(name || '');
+    if (boxed) {
+        context.fillStyle = 'rgba(196, 154, 92, 0.55)';
+        context.fillRect(0, 0, w, h);
+        context.strokeStyle = 'rgba(120, 80, 40, 0.7)';
+        context.lineWidth = Math.max(1.5, Math.min(w, h) * 0.04);
+        context.strokeRect(2, 2, w - 4, h - 4);
+        context.beginPath();
+        context.moveTo(w / 2, 0);
+        context.lineTo(w / 2, h);
+        context.moveTo(0, h / 2);
+        context.lineTo(w, h / 2);
+        context.stroke();
+        context.fillStyle = 'rgba(90, 60, 30, 0.55)';
+        context.fillRect(w * 0.3, h * 0.42, w * 0.4, h * 0.16);
+    } else {
+        context.fillStyle = 'rgba(196, 164, 110, 0.5)';
+        context.fillRect(0, 0, w, h);
+        context.strokeStyle = 'rgba(140, 110, 70, 0.55)';
+        context.lineWidth = 1.5;
+        const step = Math.max(8, Math.min(w, h) / 5);
+        for (let x = -h; x < w + h; x += step) {
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x + h, h);
+            context.stroke();
+        }
+        context.strokeStyle = 'rgba(180, 30, 30, 0.75)';
+        context.lineWidth = Math.max(2, Math.min(w, h) * 0.06);
+        context.strokeRect(w * 0.08, h * 0.08, w * 0.84, h * 0.84);
+    }
+    context.restore();
 }
 
 
@@ -513,6 +642,11 @@ function loadSprites() {
         medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton-crushed.png',
         small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton-crushed.png',
         plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant-dumped.png',
+        dining_table_broken: ['fill_the_truck_assets_individual/sprites/rectangle dining table-broken.png', 'fill_the_truck_assets_individual/sprites/Dining Table Broken.png'],
+        large_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Large Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Large Carton Pancaked.png'],
+        medium_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Medium Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Medium Carton Pancaked.png'],
+        small_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Small Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Small Carton Pancaked.png'],
+        plant_smashed: ['fill_the_truck_assets_individual/sprites/Plant-smashed.png', 'fill_the_truck_assets_individual/sprites/Plant Smashed.png'],
     };
 
     let loadedCount = 0;
@@ -832,6 +966,7 @@ function createFurnitureBody(furnitureItem) {
         baseSprite: furnitureItem.sprite,
         stageIndex: 0,
         damageState: 'intact',
+        overlayLevel: 0,
     };
 
     // For polygon/compound bodies, calculate offset between center-of-mass and bounding box center
@@ -864,16 +999,19 @@ function spawnItem() {
     currentBody = createFurnitureBody(furnitureItem);
     isPlayerControlling = true;
 
-    // First item: drop in at the middle of the play window so it lands quickly.
-    // Subsequent items: spawn above the frame and drift down at normal Tetris pace.
+    // First piece: mouth of the truck, fast fall. Subsequent: top of frame, still snappy.
     if (isFirstSpawn) {
-        Body.setPosition(currentBody, { x: currentBody.position.x, y: 380 });
+        Body.setPosition(currentBody, { x: currentBody.position.x, y: FIRST_SPAWN_Y });
+        Body.setVelocity(currentBody, { x: 0, y: FIRST_FALL_VY });
         isFirstSpawn = false;
         postParent({ type: 'fillTheTruck:gameStart' });
+    } else {
+        Body.setVelocity(currentBody, { x: 0, y: FALL_VY });
     }
 
-    // Give item controlled downward velocity for Tetris-style falling (slowed by 20%)
-    Body.setVelocity(currentBody, { x: 0, y: 1.2 });
+    if (packMode === PACK_MOVERS) {
+        snapMoversBody(currentBody, false);
+    }
 
     // Clear any existing auto-drop timer to prevent multiple spawns
     if (window.autoDropTimer) {
@@ -989,6 +1127,7 @@ function moveItem(dx) {
         x: dx * 0.35, // Horizontal velocity (slower, more intuitive control)
         y: currentVelocity.y  // Preserve falling velocity
     });
+    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
 }
 
 function rotateItem() {
@@ -1048,7 +1187,7 @@ function dropItem() {
         if (!isGameOver) {
             spawnItem();
         }
-    }, 800);
+    }, SPAWN_DELAY_MS);
 }
 
 function autoDrop() {
@@ -1061,7 +1200,7 @@ function autoDrop() {
     Body.setStatic(currentBody, false);
 
     // Give item initial downward velocity
-    Body.setVelocity(currentBody, { x: 0, y: 1.47 }); // Reduced by 60% total for graceful drop
+    Body.setVelocity(currentBody, { x: 0, y: FALL_VY });
 
     // Force the body to stay awake briefly
     currentBody.sleepThreshold = Infinity;
@@ -1086,7 +1225,22 @@ function autoDrop() {
         if (!isGameOver) {
             spawnItem();
         }
-    }, 800);
+    }, SPAWN_DELAY_MS);
+}
+
+function snapMoversBody(body, snapY) {
+    if (packMode !== PACK_MOVERS || !body || !body.furnitureData) return;
+    const halfW = (body.bounds.max.x - body.bounds.min.x) / 2;
+    let x = Math.round(body.position.x / MOVERS_GRID) * MOVERS_GRID;
+    x = Math.max(30 + halfW + 2, Math.min(370 - halfW - 2, x));
+    const quarter = Math.PI / 2;
+    const angle = Math.round(body.angle / quarter) * quarter;
+    const y = snapY ? Math.round(body.position.y / MOVERS_GRID) * MOVERS_GRID : body.position.y;
+    Body.setAngle(body, angle);
+    Body.setAngularVelocity(body, 0);
+    Body.setPosition(body, { x: x, y: y });
+    if (snapY) Body.setVelocity(body, { x: 0, y: 0 });
+    else Body.setVelocity(body, { x: 0, y: body.velocity.y });
 }
 
 // ==================== UPDATE GAME STATE ====================
@@ -1100,7 +1254,14 @@ function update(timestamp) {
     Engine.update(engine, deltaTime);
 
     stackCheckFrame++;
-    if (stackCheckFrame % 8 === 0) checkStackedWeightAndTilt();
+    if (packMode === PACK_DIY && stackCheckFrame % 8 === 0) checkStackedWeightAndTilt();
+    if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0) {
+        for (const body of world.bodies) {
+            if (body.isStatic || !body.furnitureData) continue;
+            const settled = body !== currentBody && Math.abs(body.velocity.y) < 0.35;
+            snapMoversBody(body, settled);
+        }
+    }
 
     // Check for game over continuously (not just at spawn)
     if (checkGameOver()) {
@@ -1486,20 +1647,39 @@ function drawFurnitureBody(context, body) {
     context.translate(x, y);
     context.rotate(angle);
 
-    // Draw sprite if loaded, otherwise draw placeholder rectangle
-    if (sprite && spriteImages[sprite]) {
-        context.drawImage(spriteImages[sprite], -width / 2 + ox, -height / 2 + oy, width, height);
+    const destX = -width / 2 + ox;
+    const destY = -height / 2 + oy;
+    const img = (sprite && spriteImages[sprite]) || (body.furnitureData.baseSprite && spriteImages[body.furnitureData.baseSprite]);
+    if (img) {
+        drawSpriteAtBodySize(context, img, destX, destY, width, height);
     } else {
-        // Fallback placeholder while sprites load
         context.fillStyle = '#999';
-        context.fillRect(-width / 2 + ox, -height / 2 + oy, width, height);
+        context.fillRect(destX, destY, width, height);
         context.strokeStyle = 'rgba(0,0,0,0.4)';
         context.lineWidth = 1;
-        context.strokeRect(-width / 2 + ox, -height / 2 + oy, width, height);
+        context.strokeRect(destX, destY, width, height);
         context.fillStyle = '#333';
         context.font = '8px sans-serif';
         context.textAlign = 'center';
         context.fillText(name, ox, 3 + oy);
+    }
+
+    if (packMode === PACK_DIY) {
+        const overlayLevel = body.furnitureData.overlayLevel || 0;
+        const stageIndex = body.furnitureData.stageIndex || 0;
+        const dedicatedMissing = stageIndex > 0 && !(sprite && spriteImages[sprite]);
+        if (overlayLevel || dedicatedMissing) {
+            context.save();
+            context.translate(destX, destY);
+            stampDamageOverlay(context, width, height, overlayLevel || stageIndex);
+            context.restore();
+        }
+    }
+    if (packMode === PACK_MOVERS) {
+        context.save();
+        context.translate(destX, destY);
+        stampMoversWrap(context, width, height, name);
+        context.restore();
     }
 
     context.restore();
@@ -1523,10 +1703,16 @@ function drawNextItem() {
         nextCtx.translate(centerX, centerY);
 
         if (nextItem.sprite && spriteImages[nextItem.sprite]) {
-            nextCtx.drawImage(spriteImages[nextItem.sprite], -w / 2, -h / 2, w, h);
+            drawSpriteAtBodySize(nextCtx, spriteImages[nextItem.sprite], -w / 2, -h / 2, w, h);
         } else {
             nextCtx.fillStyle = '#999';
             nextCtx.fillRect(-w / 2, -h / 2, w, h);
+        }
+        if (packMode === PACK_MOVERS) {
+            nextCtx.save();
+            nextCtx.translate(-w / 2, -h / 2);
+            stampMoversWrap(nextCtx, w, h, nextItem.name);
+            nextCtx.restore();
         }
 
         nextCtx.restore();
@@ -1633,40 +1819,32 @@ function startCountdown() {
     overlay.classList.remove('banner-mode');
     overlay.style.display = 'flex';
 
-    let count = 3;
-    numberEl.textContent = count;
+    numberEl.textContent = 'Go';
+    numberEl.style.animation = 'none';
+    setTimeout(() => {
+        numberEl.style.animation = 'countdown-pulse 0.28s ease-in-out';
+    }, 10);
 
     const countdownInterval = setInterval(() => {
-        count--;
+        clearInterval(countdownInterval);
 
-        if (count > 0) {
-            numberEl.textContent = count;
-            numberEl.style.animation = 'none';
-            setTimeout(() => {
-                numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
-            }, 10);
-        } else {
-            // Count hit 0: start gameplay immediately and flash "Fill the Truck!" banner
-            clearInterval(countdownInterval);
+        startTime = Date.now();
+        spawnItem();
+        gameLoop = requestAnimationFrame(update);
+        timerInterval = setInterval(updateTimer, 1000);
 
-            startTime = Date.now();
-            spawnItem();
-            gameLoop = requestAnimationFrame(update);
-            timerInterval = setInterval(updateTimer, 1000);
+        overlay.classList.add('banner-mode');
+        numberEl.textContent = 'Fill the Truck!';
+        numberEl.style.animation = 'none';
+        setTimeout(() => {
+            numberEl.style.animation = 'countdown-pulse 0.6s ease-in-out forwards';
+        }, 10);
 
-            overlay.classList.add('banner-mode');
-            numberEl.textContent = 'Fill the Truck!';
-            numberEl.style.animation = 'none';
-            setTimeout(() => {
-                numberEl.style.animation = 'countdown-pulse 0.6s ease-in-out forwards';
-            }, 10);
-
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                overlay.classList.remove('banner-mode');
-            }, 700);
-        }
-    }, 1000);
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.classList.remove('banner-mode');
+        }, 700);
+    }, 280);
 }
 
 function restartGame() {
