@@ -12,7 +12,7 @@ const SPAWN_Y = 15; // Spawn just inside top of visible area for instant visibil
 
 // ==================== DIY vs MOVERS DAMAGE ====================
 // Fake destruction: impulse + stacked-weight thresholds, then sprite swaps.
-// No fracture sim. V1 only: dining table, coffee table, cartons, plant.
+// No fracture sim. V1 only: dining table, cartons, plant.
 const PACK_DIY = 'diy';
 const PACK_MOVERS = 'movers';
 let packMode = PACK_DIY;
@@ -23,12 +23,6 @@ const DAMAGE_ITEMS = {
         dumpIfInverted: false,
         stages: [
             { state: 'cracked', sprite: 'dining_table_cracked', speed: 3.2, stackMass: 8, price: 180, label: 'Cracked dining table' },
-            { state: 'broken', sprite: 'dining_table_broken', speed: 6.0, stackMass: 16, price: 450, label: 'Broken dining table' },
-        ],
-    },
-    coffee_table: {
-        stages: [
-            { state: 'cracked', sprite: 'coffee_table_cracked', speed: 2.8, stackMass: 7, price: 90, label: 'Cracked coffee table' },
         ],
     },
     large_carton: {
@@ -514,36 +508,42 @@ function loadSprites() {
         dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
         loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
         ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
-        dining_table_cracked: 'fill_the_truck_assets_individual/sprites/Dining Table Cracked.png',
-        dining_table_broken: 'fill_the_truck_assets_individual/sprites/Dining Table Broken.png',
-        coffee_table_cracked: 'fill_the_truck_assets_individual/sprites/Round Coffee Table Cracked.png',
-        large_carton_crushed: 'fill_the_truck_assets_individual/sprites/Large Carton Crushed.png',
-        medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton Crushed.png',
-        small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton Crushed.png',
-        plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant Dumped.png',
+        dining_table_cracked: 'fill_the_truck_assets_individual/sprites/rectangle dining table-cracked.png',
+        large_carton_crushed: 'fill_the_truck_assets_individual/sprites/Large Carton-crushed.png',
+        medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton-crushed.png',
+        small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton-crushed.png',
+        plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant-dumped.png',
     };
 
     let loadedCount = 0;
     const totalSprites = Object.keys(spritePaths).length;
 
+    const markDone = (ok) => {
+        loadedCount++;
+        if (loadedCount === totalSprites) {
+            spritesLoaded = true;
+            console.log(ok ? 'All sprites loaded successfully' : 'Proceeding without some sprites (will use fallback textures)');
+        }
+    };
+
     for (let type in spritePaths) {
+        const paths = [].concat(spritePaths[type]);
         const img = new Image();
+        let pathIndex = 0;
         img.onload = () => {
             spriteImages[type] = img;
-            loadedCount++;
-            if (loadedCount === totalSprites) {
-                spritesLoaded = true;
-                console.log('All sprites loaded successfully');
-            }
+            markDone(true);
         };
         img.onerror = () => {
-            console.error(`Failed to load sprite: ${spritePaths[type]}`);
-            loadedCount++;
-            if (loadedCount === totalSprites) {
-                console.log('Proceeding without some sprites (will use fallback textures)');
+            pathIndex++;
+            if (pathIndex < paths.length) {
+                img.src = paths[pathIndex];
+                return;
             }
+            console.error('Failed to load sprite: ' + paths[0]);
+            markDone(false);
         };
-        img.src = spritePaths[type];
+        img.src = paths[0];
     }
 }
 
