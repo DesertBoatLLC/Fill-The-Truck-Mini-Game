@@ -62,6 +62,12 @@ const DEDICATED_DAMAGE = {
     bar_stool: [
         { state: 'scratched', sprite: 'bar_stool_scratched', speed: 2.0, stackMass: 4, price: 45, label: 'Scratched bar stool' },
     ],
+    tv: [
+        { state: 'shattered', sprite: 'tv_shattered', speed: 1.4, stackMass: 2, price: 550, label: 'Shattered TV' },
+    ],
+    mirror: [
+        { state: 'shattered', sprite: 'mirror_shattered', speed: 1.4, stackMass: 2, price: 380, label: 'Shattered mirror' },
+    ],
 };
 
 const ITEM_MATERIAL = {
@@ -75,6 +81,7 @@ const ITEM_MATERIAL = {
     large_carton: 'carton', medium_carton: 'carton', small_carton: 'carton',
     book_box: 'carton', tote: 'carton',
     plant: 'plant',
+    tv: 'glass', mirror: 'glass',
 };
 
 const MARK_INFO = {
@@ -156,7 +163,7 @@ function applyDamage(body, reason, kind) {
     body = rootBody(body);
     if (!body || !body.furnitureData) return false;
     const fd = body.furnitureData;
-    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || kind === 'scratch' || !kind);
+    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || kind === 'scratch' || kind === 'shatter' || !kind);
     const profile = getDamageProfile(body);
     const stage = dedicatedKind ? nextDamageStage(body) : null;
 
@@ -178,6 +185,13 @@ function applyDamage(body, reason, kind) {
         fd.damageReason = reason;
         if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
     } else if (kind === 'scratch' && profile) {
+        if (!stage) return false;
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if (kind === 'shatter' && profile) {
         if (!stage) return false;
         fd.stageIndex = (fd.stageIndex || 0) + 1;
         fd.damageState = stage.state;
@@ -331,6 +345,14 @@ function pairingFor(victim, other, speed) {
     if (vm === 'wood' && om === 'wood') {
         return { kind: 'nick', chance: 0.09 };
     }
+    if (vm === 'glass') {
+        const heavy = otherMass >= 3;
+        const metal = om === 'metal';
+        if (metal || heavy) return { kind: 'shatter', chance: 0.62 + Math.min(0.25, otherMass / 20) };
+        if (massOn >= 1.2) return { kind: 'shatter', chance: 0.42 };
+        if (om === 'carton') return { kind: 'shatter', chance: 0.06 };
+        return null;
+    }
     return null;
 }
 
@@ -383,6 +405,17 @@ function checkStackedWeightAndTilt() {
                 if (overlapX && restingOn && materialOf(other) === 'metal') metalOn = true;
             }
             if (metalOn && Math.random() < 0.14) applyDamage(victim, 'crush', 'tear');
+        }
+        if (vm === 'glass' && massOn >= 1.2) {
+            let metalOrHeavy = false;
+            for (const other of bodies) {
+                if (other === victim) continue;
+                const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+                const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+                if (overlapX && restingOn && (materialOf(other) === 'metal' || (other.mass || 0) >= 3)) metalOrHeavy = true;
+            }
+            const chance = metalOrHeavy ? 0.7 : 0.35;
+            if (Math.random() < chance) applyDamage(victim, 'crush', 'shatter');
         }
     }
 }
@@ -937,6 +970,8 @@ function loadSprites() {
         nightstand_scratched: 'fill_the_truck_assets_individual/sprites/NightStand-scratched.png',
         dining_chair_scratched: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak-scratched.png',
         bar_stool_scratched: 'fill_the_truck_assets_individual/sprites/Bar Stool-scratched.png',
+        tv_shattered: 'fill_the_truck_assets_individual/sprites/TV-shattered.png',
+        mirror_shattered: 'fill_the_truck_assets_individual/sprites/Mirror-shattered.png',
     };
 
     let loadedCount = 0;
