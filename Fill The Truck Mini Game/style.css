@@ -399,3 +399,84 @@ body {
     50% { transform: scale(1.2); opacity: 1; }
     100% { transform: scale(1); opacity: 1; }
 }
+
+
+/* Pack mode toggle (DIY vs Movers) */
+.mode-selector {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.mode-label {
+    color: #666;
+    font-size: 0.9em;
+}
+.mode-btn {
+    border: 2px solid #ddd;
+    background: white;
+    color: #333;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.95em;
+    font-weight: 700;
+    cursor: pointer;
+}
+.mode-btn.is-active {
+    border-color: var(--brand-primary);
+    background: var(--brand-primary);
+    color: white;
+}
+body.pack-movers .mode-btn[data-mode="movers"] {
+    border-color: #2e7d32;
+    background: #2e7d32;
+}
+
+.damage-bill {
+    text-align: left;
+    margin: 16px 0;
+    padding: 14px 16px;
+    background: #fff6f2;
+    border: 2px solid #e87722;
+    border-radius: 10px;
+}
+.damage-bill h3 {
+    font-size: 1em;
+    color: #9a3412;
+    margin-bottom: 8px;
+}
+.damage-bill.pros {
+    background: #f1f8f2;
+    border-color: #2e7d32;
+}
+.damage-bill.pros h3 {
+    color: #1b5e20;
+}
+.damage-bill ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.damage-bill li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95em;
+    color: #333;
+    padding: 3px 0;
+}
+.damage-total {
+    margin-top: 8px;
+    font-weight: 800;
+    font-size: 1.15em;
+    color: #9a3412;
+}
+.damage-bill.pros .damage-total {
+    color: #1b5e20;
+}
+#damageMeterWrap .value {
+    color: #c2410c;
+}
+body.pack-movers #damageMeterWrap .value {
+    color: #2e7d32;
+}

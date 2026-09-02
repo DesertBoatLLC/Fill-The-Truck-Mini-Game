@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fill The Truck - Moving Game</title>
-    <link rel="stylesheet" href="style.css?v=20260625c">
+    <link rel="stylesheet" href="style.css?v=20260902a">
 </head>
 <body>
     <div class="game-container">
@@ -12,11 +12,14 @@
             <p class="company-name" id="companyName" style="display: none;"></p>
             <h1>🚚 Fill The Truck!</h1>
             <p class="subtitle">Pack efficiently while we review your request</p>
+            <div class="mode-selector" id="modeSelector">
+                <span class="mode-label">Pack as:</span>
+                <button type="button" class="mode-btn is-active" data-mode="diy" id="modeDiy">DIY</button>
+                <button type="button" class="mode-btn" data-mode="movers" id="modeMovers">Movers</button>
+            </div>
             <div class="brand-selector" id="brandSelector">
                 <label for="brandSelect">Theme: </label>
                 <select id="brandSelect">
-                    <option value="scobey">Scobey Moving &amp; Storage</option>
-                    <option value="central">Central Transportation Systems</option>
                     <option value="americanMover">American Mover</option>
                     <option value="moverCo">MoverCo</option>
                     <option value="quickHaul">QuickHaul</option>
@@ -25,6 +28,8 @@
                     <option value="safeStore">SafeStore</option>
                     <option value="ecoMove">EcoMove</option>
                     <option value="ironBox">Iron Box</option>
+                    <option value="scobey">Scobey Moving &amp; Storage</option>
+                    <option value="central">Central Transportation Systems</option>
                 </select>
             </div>
         </div>
@@ -41,6 +46,10 @@
             <div class="info-item">
                 <span class="label">Time:</span>
                 <span class="value" id="timer">0s</span>
+            </div>
+            <div class="info-item" id="damageMeterWrap">
+                <span class="label">DIY Damage:</span>
+                <span class="value" id="damageMeter">$0</span>
             </div>
         </div>
 
@@ -85,7 +94,12 @@
                 <strong>Final Efficiency:</strong> <span id="finalEfficiency"></span><br>
                 <strong>Items Packed:</strong> <span id="finalItems"></span>
             </p>
-            <p class="cta-message">
+            <div id="damageBill" class="damage-bill" hidden>
+                <h3 id="damageBillTitle">DIY damage bill</h3>
+                <ul id="damageBillLines"></ul>
+                <p class="damage-total" id="damageBillTotal"></p>
+            </div>
+            <p class="cta-message" id="ctaMessage">
                 Don't try to load the truck yourself, leave that to us.<br>
                 A member of our team will reach out to you shortly.
             </p>
@@ -100,6 +114,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/build/decomp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <script src="game.js?v=20260625c"></script>
+    <script src="game.js?v=20260902a"></script>
 </body>
 </html>

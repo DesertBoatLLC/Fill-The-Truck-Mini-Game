@@ -10,6 +10,236 @@ const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
 const SPAWN_Y = 15; // Spawn just inside top of visible area for instant visibility
 
+// ==================== DIY vs MOVERS DAMAGE ====================
+// Fake destruction: impulse + stacked-weight thresholds, then sprite swaps.
+// No fracture sim. V1 only: dining table, coffee table, cartons, plant.
+const PACK_DIY = 'diy';
+const PACK_MOVERS = 'movers';
+let packMode = PACK_DIY;
+let stackCheckFrame = 0;
+
+const DAMAGE_ITEMS = {
+    dining_table: {
+        dumpIfInverted: false,
+        stages: [
+            { state: 'cracked', sprite: 'dining_table_cracked', speed: 3.2, stackMass: 8, price: 180, label: 'Cracked dining table' },
+            { state: 'broken', sprite: 'dining_table_broken', speed: 6.0, stackMass: 16, price: 450, label: 'Broken dining table' },
+        ],
+    },
+    coffee_table: {
+        stages: [
+            { state: 'cracked', sprite: 'coffee_table_cracked', speed: 2.8, stackMass: 7, price: 90, label: 'Cracked coffee table' },
+        ],
+    },
+    large_carton: {
+        stages: [
+            { state: 'crushed', sprite: 'large_carton_crushed', speed: 2.2, stackMass: 5, price: 40, label: 'Crushed large carton' },
+        ],
+    },
+    medium_carton: {
+        stages: [
+            { state: 'crushed', sprite: 'medium_carton_crushed', speed: 1.9, stackMass: 4, price: 25, label: 'Crushed medium carton' },
+        ],
+    },
+    small_carton: {
+        stages: [
+            { state: 'crushed', sprite: 'small_carton_crushed', speed: 1.6, stackMass: 3, price: 15, label: 'Crushed small carton' },
+        ],
+    },
+    plant: {
+        dumpIfInverted: true,
+        stages: [
+            { state: 'dumped', sprite: 'plant_dumped', speed: 2.0, stackMass: 4, price: 65, label: 'Dumped plant' },
+        ],
+    },
+};
+
+function getDamageProfile(body) {
+    if (!body || !body.furnitureData) return null;
+    return DAMAGE_ITEMS[body.furnitureData.baseSprite] || null;
+}
+
+function nextDamageStage(body) {
+    const profile = getDamageProfile(body);
+    if (!profile) return null;
+    const idx = body.furnitureData.stageIndex || 0;
+    if (idx >= profile.stages.length) return null;
+    return profile.stages[idx];
+}
+
+function applyDamage(body, reason) {
+    if (packMode !== PACK_DIY || isGameOver) return false;
+    const stage = nextDamageStage(body);
+    if (!stage) return false;
+    body.furnitureData.stageIndex = (body.furnitureData.stageIndex || 0) + 1;
+    body.furnitureData.damageState = stage.state;
+    body.furnitureData.sprite = stage.sprite;
+    body.furnitureData.damageReason = reason;
+    updateDamageMeter();
+    return true;
+}
+
+function collectDamageBill() {
+    const lines = [];
+    let total = 0;
+    if (!world) return { lines, total };
+    for (const body of world.bodies) {
+        if (!body.furnitureData) continue;
+        const profile = getDamageProfile(body);
+        if (!profile) continue;
+        const idx = body.furnitureData.stageIndex || 0;
+        if (idx <= 0) continue;
+        const stage = profile.stages[Math.min(idx, profile.stages.length) - 1];
+        lines.push({ label: stage.label, price: stage.price, reason: body.furnitureData.damageReason });
+        total += stage.price;
+    }
+    return { lines, total };
+}
+
+function updateDamageMeter() {
+    const el = document.getElementById('damageMeter');
+    const wrap = document.getElementById('damageMeterWrap');
+    if (!el) return;
+    if (packMode === PACK_MOVERS) {
+        el.textContent = '$0';
+        if (wrap) wrap.querySelector('.label').textContent = 'Pro pack:';
+        return;
+    }
+    if (wrap) wrap.querySelector('.label').textContent = 'DIY Damage:';
+    el.textContent = '$' + collectDamageBill().total;
+}
+
+function setPackMode(mode, persist) {
+    packMode = (mode === PACK_MOVERS) ? PACK_MOVERS : PACK_DIY;
+    document.body.classList.toggle('pack-movers', packMode === PACK_MOVERS);
+    const diyBtn = document.getElementById('modeDiy');
+    const moversBtn = document.getElementById('modeMovers');
+    if (diyBtn) diyBtn.classList.toggle('is-active', packMode === PACK_DIY);
+    if (moversBtn) moversBtn.classList.toggle('is-active', packMode === PACK_MOVERS);
+    if (persist !== false) {
+        try { localStorage.setItem('packMode', packMode); } catch (_) {}
+    }
+    updateDamageMeter();
+}
+
+function loadPackMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromUrl = (urlParams.get('mode') || '').toLowerCase();
+    if (fromUrl === PACK_DIY || fromUrl === PACK_MOVERS) {
+        setPackMode(fromUrl, false);
+        return;
+    }
+    let saved = null;
+    try { saved = localStorage.getItem('packMode'); } catch (_) {}
+    setPackMode(saved === PACK_MOVERS ? PACK_MOVERS : PACK_DIY, false);
+}
+
+function setupModeSelector() {
+    const selector = document.getElementById('modeSelector');
+    if (!selector) return;
+    selector.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        setPackMode(btn.getAttribute('data-mode'), true);
+    });
+}
+
+function considerImpact(victim, other) {
+    const profile = getDamageProfile(victim);
+    const stage = nextDamageStage(victim);
+    if (!profile || !stage || other.isStatic) return;
+    const rel = Matter.Vector.sub(victim.velocity, other.velocity);
+    const speed = Matter.Vector.magnitude(rel);
+    const otherMass = other.mass || 0;
+    // Slam: fast relative speed. Crush-on-hit: slower but a much heavier body.
+    if (speed >= stage.speed || (otherMass >= stage.stackMass && speed >= 0.9)) {
+        applyDamage(victim, 'impact');
+    }
+}
+
+function setupDamageCollisions() {
+    Events.on(engine, 'collisionStart', (event) => {
+        if (packMode !== PACK_DIY || isGameOver) return;
+        for (const pair of event.pairs) {
+            considerImpact(pair.bodyA, pair.bodyB);
+            considerImpact(pair.bodyB, pair.bodyA);
+        }
+    });
+}
+
+function checkStackedWeightAndTilt() {
+    if (packMode !== PACK_DIY || isGameOver || !world) return;
+    const bodies = world.bodies.filter(b => !b.isStatic && b.furnitureData);
+    for (const victim of bodies) {
+        const profile = getDamageProfile(victim);
+        const stage = nextDamageStage(victim);
+        if (!profile || !stage) continue;
+
+        if (profile.dumpIfInverted) {
+            const a = ((victim.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            if (a > 1.15 && a < (Math.PI * 2 - 1.15)) {
+                applyDamage(victim, 'inverted');
+                continue;
+            }
+        }
+
+        let massOn = 0;
+        for (const other of bodies) {
+            if (other === victim) continue;
+            const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+            const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+            if (overlapX && restingOn) massOn += other.mass || 0;
+        }
+        if (massOn >= stage.stackMass) applyDamage(victim, 'crush');
+    }
+}
+
+function renderDamageBill() {
+    const box = document.getElementById('damageBill');
+    const title = document.getElementById('damageBillTitle');
+    const list = document.getElementById('damageBillLines');
+    const totalEl = document.getElementById('damageBillTotal');
+    const cta = document.getElementById('ctaMessage');
+    if (!box) return { lines: [], total: 0, mode: packMode };
+
+    const bill = collectDamageBill();
+    box.hidden = false;
+    list.innerHTML = '';
+
+    if (packMode === PACK_MOVERS) {
+        box.classList.add('pros');
+        title.textContent = 'Packed by pros';
+        const li = document.createElement('li');
+        li.innerHTML = '<span>Wrapped and stacked</span><span>$0</span>';
+        list.appendChild(li);
+        totalEl.textContent = 'Claim total: $0';
+        if (cta) cta.innerHTML = 'That is how the truck should look when we load it.<br>A member of our team will reach out to you shortly.';
+        return { ...bill, total: 0, mode: packMode };
+    }
+
+    box.classList.remove('pros');
+    title.textContent = 'DIY damage bill';
+    if (bill.lines.length === 0) {
+        const li = document.createElement('li');
+        li.innerHTML = '<span>Got lucky this run</span><span>$0</span>';
+        list.appendChild(li);
+    } else {
+        for (const line of bill.lines) {
+            const li = document.createElement('li');
+            li.innerHTML = '<span>' + line.label + '</span><span>$' + line.price + '</span>';
+            list.appendChild(li);
+        }
+    }
+    totalEl.textContent = 'Claim total: $' + bill.total;
+    if (cta) {
+        cta.innerHTML = bill.total > 0
+            ? "Don't try to load the truck yourself, leave that to us.<br>That bill is why."
+            : "Don't try to load the truck yourself, leave that to us.<br>A member of our team will reach out to you shortly.";
+    }
+    return { ...bill, mode: packMode };
+}
+
+
 // Furniture items — all sprite-based
 // Dimensions are game-world pixels (truck interior is 340px wide)
 // Density controls weight: heavy appliances ~0.003, furniture ~0.0015-0.002, light items ~0.0008-0.001
@@ -284,6 +514,13 @@ function loadSprites() {
         dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
         loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
         ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
+        dining_table_cracked: 'fill_the_truck_assets_individual/sprites/Dining Table Cracked.png',
+        dining_table_broken: 'fill_the_truck_assets_individual/sprites/Dining Table Broken.png',
+        coffee_table_cracked: 'fill_the_truck_assets_individual/sprites/Round Coffee Table Cracked.png',
+        large_carton_crushed: 'fill_the_truck_assets_individual/sprites/Large Carton Crushed.png',
+        medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton Crushed.png',
+        small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton Crushed.png',
+        plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant Dumped.png',
     };
 
     let loadedCount = 0;
@@ -334,6 +571,7 @@ function init() {
             applyBrandTheme(e.target.value);
         });
     }
+    setupModeSelector();
 
     // Prepare game
     nextItem = getRandomItem();
@@ -390,6 +628,7 @@ function initPhysics() {
     });
 
     World.add(world, [floor, leftWall, rightWall]);
+    setupDamageCollisions();
 }
 
 // ==================== PHYSICS ====================
@@ -584,7 +823,16 @@ function createFurnitureBody(furnitureItem) {
     }
 
     // Attach metadata for rendering
-    body.furnitureData = { type, name, width, height, sprite: furnitureItem.sprite };
+    body.furnitureData = {
+        type,
+        name,
+        width,
+        height,
+        sprite: furnitureItem.sprite,
+        baseSprite: furnitureItem.sprite,
+        stageIndex: 0,
+        damageState: 'intact',
+    };
 
     // For polygon/compound bodies, calculate offset between center-of-mass and bounding box center
     // so sprites render aligned with the physics shape
@@ -850,6 +1098,9 @@ function update(timestamp) {
 
     // Update physics engine (always run to handle dropped items)
     Engine.update(engine, deltaTime);
+
+    stackCheckFrame++;
+    if (stackCheckFrame % 8 === 0) checkStackedWeightAndTilt();
 
     // Check for game over continuously (not just at spawn)
     if (checkGameOver()) {
@@ -1302,6 +1553,7 @@ function updateScore() {
 
     document.getElementById('efficiency').textContent = efficiency + '%';
     document.getElementById('items').textContent = bodies.length;
+    updateDamageMeter();
 }
 
 function updateTimer() {
@@ -1337,6 +1589,7 @@ function endGame() {
     const overlay = document.getElementById('gameOverOverlay');
     document.getElementById('finalEfficiency').textContent = efficiency;
     document.getElementById('finalItems').textContent = itemsPacked;
+    const bill = renderDamageBill();
     overlay.style.display = 'flex';
 
     // Notify embedding parent page (no-op when not iframed — posts to self).
@@ -1361,6 +1614,9 @@ function endGame() {
         timeToFirstInputMs: firstInputTime !== null ? (firstInputTime - startTime) : null,
         gameOverReason: lastGameOverReason,
         replayCount: replayCount,
+        packMode: packMode,
+        damageBill: bill.total,
+        damagedItems: bill.lines,
     });
 
     // Hide old message div (if it exists)
@@ -1441,6 +1697,9 @@ function restartGame() {
     document.getElementById('efficiency').textContent = '0%';
     document.getElementById('items').textContent = '0';
     document.getElementById('timer').textContent = '0s';
+    const billBox = document.getElementById('damageBill');
+    if (billBox) billBox.hidden = true;
+    updateDamageMeter();
 
     // Clear next item preview
     nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
@@ -1516,6 +1775,7 @@ function loadBrandPreference() {
 // ==================== STARTUP ====================
 window.addEventListener('load', () => {
     loadBrandPreference();
+    loadPackMode();
     init();
     setupAutoResize();
 });
