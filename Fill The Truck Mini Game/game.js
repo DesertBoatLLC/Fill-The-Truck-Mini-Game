@@ -3,12 +3,12 @@ const TRUCK_WIDTH = 400;
 const TRUCK_HEIGHT = 600;
 
 // Physics constants
-const WORLD_GRAVITY = 0.26; // Snappier fall so first piece hits the well quickly
+const WORLD_GRAVITY = 0.18; // Between step-1 crawl and step-2 rocket
 const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
-const DEFAULT_RESTITUTION = 0.03; // Very low bounce
+const DEFAULT_RESTITUTION = 0.03; // Very low bounce (DIY). Movers use 0.
 const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
-const SPAWN_Y = 15; // Spawn just inside top of visible area for instant visibility
+const SPAWN_Y = 22; // Mouth of the truck
 
 // ==================== DIY vs MOVERS DAMAGE ====================
 // Fake destruction: impulse + stacked-weight thresholds, then sprite swaps.
@@ -19,10 +19,9 @@ let packMode = PACK_DIY;
 let stackCheckFrame = 0;
 
 const MOVERS_GRID = 16;
-const SPAWN_DELAY_MS = 280;
-const FIRST_SPAWN_Y = 55;
-const FIRST_FALL_VY = 4.0;
-const FALL_VY = 2.8;
+const SPAWN_DELAY_MS = 500;
+const FIRST_FALL_VY = 2.1;
+const FALL_VY = 1.65;
 
 const DEDICATED_DAMAGE = {
     dining_table: [
@@ -47,19 +46,12 @@ const DEDICATED_DAMAGE = {
     ],
 };
 
-function genericStages(name) {
-    const n = (name || 'item').toLowerCase();
-    return [
-        { state: 'damaged', sprite: null, overlay: 1, speed: 3.0, stackMass: 7, price: 55, label: 'Damaged ' + n },
-        { state: 'wrecked', sprite: null, overlay: 2, speed: 5.5, stackMass: 13, price: 120, label: 'Wrecked ' + n },
-    ];
-}
 function getDamageProfile(body) {
     if (!body || !body.furnitureData) return null;
     const key = body.furnitureData.baseSprite;
     const dedicated = DEDICATED_DAMAGE[key];
-    if (dedicated) return { dumpIfInverted: key === 'plant', stages: dedicated };
-    return { dumpIfInverted: false, stages: genericStages(body.furnitureData.name) };
+    if (!dedicated) return null;
+    return { dumpIfInverted: key === 'plant', stages: dedicated };
 }
 
 function nextDamageStage(body) {
@@ -129,6 +121,15 @@ function setPackMode(mode, persist) {
     if (persist !== false) {
         try { localStorage.setItem('packMode', packMode); } catch (_) {}
     }
+    if (world) {
+        for (const b of world.bodies) {
+            if (b.isStatic) continue;
+            Body.set(b, { restitution: packMode === PACK_MOVERS ? 0 : DEFAULT_RESTITUTION });
+            if (packMode === PACK_MOVERS) {
+                Body.setAngularVelocity(b, 0);
+            }
+        }
+    }
     updateDamageMeter();
 }
 
@@ -154,6 +155,32 @@ function setupModeSelector() {
     });
 }
 
+function massStackedOn(victim) {
+    if (!world) return 0;
+    let massOn = 0;
+    for (const other of world.bodies) {
+        if (other === victim || other.isStatic || !other.furnitureData) continue;
+        const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+        const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+        if (overlapX && restingOn) massOn += other.mass || 0;
+    }
+    return massOn;
+}
+
+function rollDamage(stage, speed, massOn, otherMass) {
+    let chance = 0;
+    if (speed >= stage.speed * 0.5) {
+        chance = 0.08 + 0.38 * Math.min(1, speed / Math.max(0.01, stage.speed));
+    }
+    if (otherMass >= stage.stackMass && speed >= 0.55) {
+        chance = Math.max(chance, 0.12);
+    }
+    const stackRatio = stage.stackMass > 0 ? massOn / stage.stackMass : 0;
+    chance += Math.min(0.5, stackRatio * 0.22);
+    if (chance <= 0) return false;
+    return Math.random() < Math.min(0.72, chance);
+}
+
 function considerImpact(victim, other) {
     const profile = getDamageProfile(victim);
     const stage = nextDamageStage(victim);
@@ -161,8 +188,8 @@ function considerImpact(victim, other) {
     const rel = Matter.Vector.sub(victim.velocity, other.velocity);
     const speed = Matter.Vector.magnitude(rel);
     const otherMass = other.mass || 0;
-    // Slam: fast relative speed. Crush-on-hit: slower but a much heavier body.
-    if (speed >= stage.speed || (otherMass >= stage.stackMass && speed >= 0.9)) {
+    const massOn = massStackedOn(victim);
+    if (rollDamage(stage, speed, massOn, otherMass)) {
         applyDamage(victim, 'impact');
     }
 }
@@ -193,14 +220,12 @@ function checkStackedWeightAndTilt() {
             }
         }
 
-        let massOn = 0;
-        for (const other of bodies) {
-            if (other === victim) continue;
-            const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
-            const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
-            if (overlapX && restingOn) massOn += other.mass || 0;
+        const massOn = massStackedOn(victim);
+        const stackRatio = stage.stackMass > 0 ? massOn / stage.stackMass : 0;
+        if (stackRatio >= 0.4) {
+            const tickChance = Math.min(0.12, 0.015 + 0.03 * stackRatio);
+            if (Math.random() < tickChance) applyDamage(victim, 'crush');
         }
-        if (massOn >= stage.stackMass) applyDamage(victim, 'crush');
     }
 }
 
@@ -299,70 +324,72 @@ function drawSpriteAtBodySize(context, img, dx, dy, dw, dh) {
     context.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
 }
 
-function stampDamageOverlay(context, w, h, level) {
-    context.save();
-    context.beginPath();
-    context.rect(0, 0, w, h);
-    context.clip();
-    const heavy = level >= 2;
-    context.fillStyle = heavy ? 'rgba(90, 40, 10, 0.32)' : 'rgba(90, 40, 10, 0.18)';
-    context.fillRect(0, 0, w, h);
-    context.strokeStyle = heavy ? 'rgba(40, 20, 10, 0.85)' : 'rgba(40, 20, 10, 0.55)';
-    context.lineWidth = heavy ? 2.2 : 1.4;
-    context.beginPath();
-    context.moveTo(w * 0.12, h * 0.18);
-    context.lineTo(w * 0.38, h * 0.42);
-    context.lineTo(w * 0.28, h * 0.72);
-    context.moveTo(w * 0.55, h * 0.12);
-    context.lineTo(w * 0.72, h * 0.48);
-    context.lineTo(w * 0.88, h * 0.35);
-    if (heavy) {
-        context.moveTo(w * 0.18, h * 0.55);
-        context.lineTo(w * 0.62, h * 0.82);
-        context.moveTo(w * 0.42, h * 0.22);
-        context.lineTo(w * 0.85, h * 0.68);
-    }
-    context.stroke();
-    context.restore();
+const wrapCache = new WeakMap();
+let blanketTile = null;
+
+function getBlanketTile() {
+    if (blanketTile) return blanketTile;
+    const src = spriteImages.mover_blanket;
+    if (!src) return null;
+    const t = document.createElement('canvas');
+    t.width = 256;
+    t.height = 256;
+    t.getContext('2d').drawImage(src, 0, 0, 256, 256);
+    blanketTile = t;
+    return t;
 }
 
-function stampMoversWrap(context, w, h, name) {
-    context.save();
-    context.beginPath();
-    context.rect(0, 0, w, h);
-    context.clip();
-    const boxed = /plant|guitar|lamp|toolbox|tote|carton|box|microwave|vacuum|trash/i.test(name || '');
-    if (boxed) {
-        context.fillStyle = 'rgba(196, 154, 92, 0.55)';
-        context.fillRect(0, 0, w, h);
-        context.strokeStyle = 'rgba(120, 80, 40, 0.7)';
-        context.lineWidth = Math.max(1.5, Math.min(w, h) * 0.04);
-        context.strokeRect(2, 2, w - 4, h - 4);
-        context.beginPath();
-        context.moveTo(w / 2, 0);
-        context.lineTo(w / 2, h);
-        context.moveTo(0, h / 2);
-        context.lineTo(w, h / 2);
-        context.stroke();
-        context.fillStyle = 'rgba(90, 60, 30, 0.55)';
-        context.fillRect(w * 0.3, h * 0.42, w * 0.4, h * 0.16);
+function isCartonName(name) {
+    return /carton|box|tote/i.test(name || '');
+}
+
+function getMoversWrappedImage(img, name) {
+    if (!img || isCartonName(name)) return img;
+    const cached = wrapCache.get(img);
+    if (cached) return cached;
+    const w = img.naturalWidth || img.width || 1;
+    const h = img.naturalHeight || img.height || 1;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d');
+    const tile = getBlanketTile();
+    if (tile) {
+        g.fillStyle = g.createPattern(tile, 'repeat');
+        g.fillRect(0, 0, w, h);
     } else {
-        context.fillStyle = 'rgba(196, 164, 110, 0.5)';
-        context.fillRect(0, 0, w, h);
-        context.strokeStyle = 'rgba(140, 110, 70, 0.55)';
-        context.lineWidth = 1.5;
-        const step = Math.max(8, Math.min(w, h) / 5);
-        for (let x = -h; x < w + h; x += step) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x + h, h);
-            context.stroke();
-        }
-        context.strokeStyle = 'rgba(180, 30, 30, 0.75)';
-        context.lineWidth = Math.max(2, Math.min(w, h) * 0.06);
-        context.strokeRect(w * 0.08, h * 0.08, w * 0.84, h * 0.84);
+        g.fillStyle = '#1a2744';
+        g.fillRect(0, 0, w, h);
     }
-    context.restore();
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(img, 0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+    try {
+        const data = g.getImageData(0, 0, w, h);
+        const d = data.data;
+        const srcA = new Uint8Array(d.length);
+        srcA.set(d);
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                const i = (y * w + x) * 4;
+                if (srcA[i + 3] < 20) continue;
+                const edge =
+                    srcA[i - 1] < 20 ||
+                    srcA[((y * w + (x + 1)) * 4) + 3] < 20 ||
+                    srcA[(((y - 1) * w + x) * 4) + 3] < 20 ||
+                    srcA[(((y + 1) * w + x) * 4) + 3] < 20;
+                if (edge) {
+                    d[i] = 52;
+                    d[i + 1] = 118;
+                    d[i + 2] = 214;
+                    d[i + 3] = 255;
+                }
+            }
+        }
+        g.putImageData(data, 0, 0);
+    } catch (_) {}
+    wrapCache.set(img, c);
+    return c;
 }
 
 
@@ -650,6 +677,7 @@ function loadSprites() {
         medium_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Medium Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Medium Carton Pancaked.png'],
         small_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Small Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Small Carton Pancaked.png'],
         plant_smashed: ['fill_the_truck_assets_individual/sprites/Plant-smashed.png', 'fill_the_truck_assets_individual/sprites/Plant Smashed.png'],
+        mover_blanket: 'fill_the_truck_assets_individual/sprites/mover-blanket.png',
     };
 
     let loadedCount = 0;
@@ -983,6 +1011,10 @@ function createFurnitureBody(furnitureItem) {
         };
     }
 
+    if (packMode === PACK_MOVERS) {
+        Body.set(body, { restitution: 0, friction: 0.98 });
+    }
+
     World.add(world, body);
     return body;
 }
@@ -1002,9 +1034,8 @@ function spawnItem() {
     currentBody = createFurnitureBody(furnitureItem);
     isPlayerControlling = true;
 
-    // First piece: mouth of the truck, fast fall. Subsequent: top of frame, still snappy.
+    // Mouth of the truck, then a short controlled fall. No teleport, no crawl.
     if (isFirstSpawn) {
-        Body.setPosition(currentBody, { x: currentBody.position.x, y: FIRST_SPAWN_Y });
         Body.setVelocity(currentBody, { x: 0, y: FIRST_FALL_VY });
         isFirstSpawn = false;
         postParent({ type: 'fillTheTruck:gameStart' });
@@ -1261,7 +1292,7 @@ function update(timestamp) {
     if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0) {
         for (const body of world.bodies) {
             if (body.isStatic || !body.furnitureData) continue;
-            const settled = body !== currentBody && Math.abs(body.velocity.y) < 0.35;
+            const settled = body !== currentBody && Math.abs(body.velocity.y) < 0.2 && Math.abs(body.velocity.x) < 0.15;
             snapMoversBody(body, settled);
         }
     }
@@ -1653,36 +1684,16 @@ function drawFurnitureBody(context, body) {
     const destX = -width / 2 + ox;
     const destY = -height / 2 + oy;
     const img = (sprite && spriteImages[sprite]) || (body.furnitureData.baseSprite && spriteImages[body.furnitureData.baseSprite]);
-    if (img) {
-        drawSpriteAtBodySize(context, img, destX, destY, width, height);
+    const drawImg = (packMode === PACK_MOVERS && img) ? getMoversWrappedImage(img, name) : img;
+    if (drawImg) {
+        drawSpriteAtBodySize(context, drawImg, destX, destY, width, height);
     } else {
         context.fillStyle = '#999';
         context.fillRect(destX, destY, width, height);
-        context.strokeStyle = 'rgba(0,0,0,0.4)';
-        context.lineWidth = 1;
-        context.strokeRect(destX, destY, width, height);
         context.fillStyle = '#333';
         context.font = '8px sans-serif';
         context.textAlign = 'center';
         context.fillText(name, ox, 3 + oy);
-    }
-
-    if (packMode === PACK_DIY) {
-        const overlayLevel = body.furnitureData.overlayLevel || 0;
-        const stageIndex = body.furnitureData.stageIndex || 0;
-        const showingDedicated = sprite && sprite !== body.furnitureData.baseSprite && spriteImages[sprite];
-        if (stageIndex > 0 && !showingDedicated) {
-            context.save();
-            context.translate(destX, destY);
-            stampDamageOverlay(context, width, height, overlayLevel || stageIndex);
-            context.restore();
-        }
-    }
-    if (packMode === PACK_MOVERS) {
-        context.save();
-        context.translate(destX, destY);
-        stampMoversWrap(context, width, height, name);
-        context.restore();
     }
 
     context.restore();
@@ -1706,16 +1717,12 @@ function drawNextItem() {
         nextCtx.translate(centerX, centerY);
 
         if (nextItem.sprite && spriteImages[nextItem.sprite]) {
-            drawSpriteAtBodySize(nextCtx, spriteImages[nextItem.sprite], -w / 2, -h / 2, w, h);
+            let preview = spriteImages[nextItem.sprite];
+            if (packMode === PACK_MOVERS) preview = getMoversWrappedImage(preview, nextItem.name);
+            drawSpriteAtBodySize(nextCtx, preview, -w / 2, -h / 2, w, h);
         } else {
             nextCtx.fillStyle = '#999';
             nextCtx.fillRect(-w / 2, -h / 2, w, h);
-        }
-        if (packMode === PACK_MOVERS) {
-            nextCtx.save();
-            nextCtx.translate(-w / 2, -h / 2);
-            stampMoversWrap(nextCtx, w, h, nextItem.name);
-            nextCtx.restore();
         }
 
         nextCtx.restore();
