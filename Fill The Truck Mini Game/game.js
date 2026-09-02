@@ -642,7 +642,7 @@ function loadSprites() {
         medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton-crushed.png',
         small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton-crushed.png',
         plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant-dumped.png',
-        dining_table_broken: ['fill_the_truck_assets_individual/sprites/rectangle dining table-broken.png', 'fill_the_truck_assets_individual/sprites/Dining Table Broken.png'],
+        dining_table_broken: 'fill_the_truck_assets_individual/sprites/rectangle dining table-broken.png',
         large_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Large Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Large Carton Pancaked.png'],
         medium_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Medium Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Medium Carton Pancaked.png'],
         small_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Small Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Small Carton Pancaked.png'],
