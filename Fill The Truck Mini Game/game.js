@@ -77,8 +77,11 @@ function applyDamage(body, reason) {
     body.furnitureData.stageIndex = (body.furnitureData.stageIndex || 0) + 1;
     body.furnitureData.damageState = stage.state;
     body.furnitureData.damageReason = reason;
-    if (stage.sprite && spriteImages[stage.sprite]) {
+    // Always pin the dedicated sprite key. If it is still loading, draw falls back
+    // to the intact sprite and swaps in on the next frame once the PNG lands.
+    if (stage.sprite) {
         body.furnitureData.sprite = stage.sprite;
+        body.furnitureData.overlayLevel = 0;
     } else {
         body.furnitureData.overlayLevel = stage.overlay || body.furnitureData.stageIndex;
     }
@@ -1667,8 +1670,8 @@ function drawFurnitureBody(context, body) {
     if (packMode === PACK_DIY) {
         const overlayLevel = body.furnitureData.overlayLevel || 0;
         const stageIndex = body.furnitureData.stageIndex || 0;
-        const dedicatedMissing = stageIndex > 0 && !(sprite && spriteImages[sprite]);
-        if (overlayLevel || dedicatedMissing) {
+        const showingDedicated = sprite && sprite !== body.furnitureData.baseSprite && spriteImages[sprite];
+        if (stageIndex > 0 && !showingDedicated) {
             context.save();
             context.translate(destX, destY);
             stampDamageOverlay(context, width, height, overlayLevel || stageIndex);
