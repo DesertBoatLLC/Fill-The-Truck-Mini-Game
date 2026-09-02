@@ -1234,9 +1234,7 @@ function spawnItem() {
         Body.setVelocity(currentBody, { x: 0, y: FALL_VY });
     }
 
-    if (packMode === PACK_MOVERS) {
-        snapMoversBody(currentBody, false);
-    }
+    // Movers: do not grid-lock the falling piece. Snap only after drop/settle.
 
     // Clear any existing auto-drop timer to prevent multiple spawns
     if (window.autoDropTimer) {
@@ -1352,7 +1350,6 @@ function moveItem(dx) {
         x: dx * 0.35, // Horizontal velocity (slower, more intuitive control)
         y: currentVelocity.y  // Preserve falling velocity
     });
-    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
 }
 
 function rotateItem() {
@@ -1398,6 +1395,7 @@ function dropItem() {
 
     // Disable player control - no more movement after drop
     isPlayerControlling = false;
+    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
     itemsPacked++;
     analyticsCounters.manualDrops++;
     postParent({
@@ -1437,6 +1435,7 @@ function autoDrop() {
     }, 100);
 
     isPlayerControlling = false;
+    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
     itemsPacked++;
     analyticsCounters.autoDrops++;
     postParent({
@@ -1487,10 +1486,12 @@ function update(timestamp) {
             pinDamageVisual(body);
         }
     }
-    if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0) {
+    if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0 && world) {
         for (const body of world.bodies) {
             if (body.isStatic || !body.furnitureData) continue;
-            const settled = body !== currentBody && Math.abs(body.velocity.y) < 0.2 && Math.abs(body.velocity.x) < 0.15;
+            if (body === currentBody && isPlayerControlling) continue;
+            const sleeping = body.isSleeping;
+            const settled = sleeping || (Math.abs(body.velocity.y) < 0.2 && Math.abs(body.velocity.x) < 0.15);
             snapMoversBody(body, settled);
         }
     }
