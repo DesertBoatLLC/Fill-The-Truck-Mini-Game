@@ -590,10 +590,22 @@ function isCartonName(name) {
     return /carton|box|tote/i.test(name || '');
 }
 
-function getMoversWrappedImage(img, name) {
-    if (!img || isCartonName(name)) return img;
+function skipMoversWrap(name, sprite) {
+    if (isCartonName(name) || isCartonName(sprite)) return true;
+    if (/plant/i.test(name || '') || /plant/i.test(sprite || '')) return true;
+    return false;
+}
+
+const WRAP_HARDWARE = {
+    long_dresser: 'long_dresser_hardware',
+};
+
+function getMoversWrappedImage(img, name, sprite) {
+    if (!img || skipMoversWrap(name, sprite)) return img;
+    const hwKey = sprite ? WRAP_HARDWARE[sprite] : null;
+    const hw = hwKey ? spriteImages[hwKey] : null;
     const cached = wrapCache.get(img);
-    if (cached) return cached;
+    if (cached && (!hwKey || cached._hw)) return cached;
     const w = img.naturalWidth || img.width || 1;
     const h = img.naturalHeight || img.height || 1;
     const c = document.createElement('canvas');
@@ -635,7 +647,12 @@ function getMoversWrappedImage(img, name) {
         }
         g.putImageData(data, 0, 0);
     } catch (_) {}
-    wrapCache.set(img, c);
+    if (hw) {
+        g.globalCompositeOperation = 'source-over';
+        g.drawImage(hw, 0, 0, w, h);
+        c._hw = true;
+    }
+    if (!hwKey || hw) wrapCache.set(img, c);
     return c;
 }
 
@@ -931,6 +948,7 @@ function loadSprites() {
         nightstand_scratched: 'fill_the_truck_assets_individual/sprites/NightStand-scratched.png',
         dining_chair_scratched: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak-scratched.png',
         bar_stool_scratched: 'fill_the_truck_assets_individual/sprites/Bar Stool-scratched.png',
+        long_dresser_hardware: 'fill_the_truck_assets_individual/sprites/Long Dresser-hardware.png',
     };
 
     let loadedCount = 0;
@@ -1952,7 +1970,7 @@ function drawFurnitureBody(context, body) {
     const destX = -width / 2 + ox;
     const destY = -height / 2 + oy;
     const img = imageForFurniture(body.furnitureData);
-    const drawImg = (packMode === PACK_MOVERS && img) ? getMoversWrappedImage(img, name) : img;
+    const drawImg = (packMode === PACK_MOVERS && img) ? getMoversWrappedImage(img, name, body.furnitureData.baseSprite || sprite) : img;
     if (drawImg) {
         drawSpriteAtBodySize(context, drawImg, destX, destY, width, height);
     } else {
@@ -1989,7 +2007,7 @@ function drawNextItem() {
 
         if (nextItem.sprite && spriteImages[nextItem.sprite]) {
             let preview = spriteImages[nextItem.sprite];
-            if (packMode === PACK_MOVERS) preview = getMoversWrappedImage(preview, nextItem.name);
+            if (packMode === PACK_MOVERS) preview = getMoversWrappedImage(preview, nextItem.name, nextItem.sprite);
             drawSpriteAtBodySize(nextCtx, preview, -w / 2, -h / 2, w, h);
         } else {
             nextCtx.fillStyle = '#999';
