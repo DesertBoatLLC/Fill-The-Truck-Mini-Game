@@ -596,16 +596,10 @@ function skipMoversWrap(name, sprite) {
     return false;
 }
 
-const WRAP_HARDWARE = {
-    long_dresser: 'long_dresser_hardware',
-};
-
 function getMoversWrappedImage(img, name, sprite) {
     if (!img || skipMoversWrap(name, sprite)) return img;
-    const hwKey = sprite ? WRAP_HARDWARE[sprite] : null;
-    const hw = hwKey ? spriteImages[hwKey] : null;
     const cached = wrapCache.get(img);
-    if (cached && (!hwKey || cached._hw)) return cached;
+    if (cached) return cached;
     const w = img.naturalWidth || img.width || 1;
     const h = img.naturalHeight || img.height || 1;
     const c = document.createElement('canvas');
@@ -647,12 +641,7 @@ function getMoversWrappedImage(img, name, sprite) {
         }
         g.putImageData(data, 0, 0);
     } catch (_) {}
-    if (hw) {
-        g.globalCompositeOperation = 'source-over';
-        g.drawImage(hw, 0, 0, w, h);
-        c._hw = true;
-    }
-    if (!hwKey || hw) wrapCache.set(img, c);
+    wrapCache.set(img, c);
     return c;
 }
 
@@ -948,7 +937,6 @@ function loadSprites() {
         nightstand_scratched: 'fill_the_truck_assets_individual/sprites/NightStand-scratched.png',
         dining_chair_scratched: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak-scratched.png',
         bar_stool_scratched: 'fill_the_truck_assets_individual/sprites/Bar Stool-scratched.png',
-        long_dresser_hardware: 'fill_the_truck_assets_individual/sprites/Long Dresser-hardware.png',
     };
 
     let loadedCount = 0;
@@ -1537,6 +1525,7 @@ function autoDrop() {
 
 function snapMoversBody(body, snapY) {
     if (packMode !== PACK_MOVERS || !body || !body.furnitureData) return;
+    if (snapY && body.furnitureData.moversLanded) return;
     const halfW = (body.bounds.max.x - body.bounds.min.x) / 2;
     let x = Math.round(body.position.x / MOVERS_GRID) * MOVERS_GRID;
     x = Math.max(30 + halfW + 2, Math.min(370 - halfW - 2, x));
@@ -1546,8 +1535,12 @@ function snapMoversBody(body, snapY) {
     Body.setAngle(body, angle);
     Body.setAngularVelocity(body, 0);
     Body.setPosition(body, { x: x, y: y });
-    if (snapY) Body.setVelocity(body, { x: 0, y: 0 });
-    else Body.setVelocity(body, { x: 0, y: body.velocity.y });
+    if (snapY) {
+        Body.setVelocity(body, { x: 0, y: 0 });
+        body.furnitureData.moversLanded = true;
+    } else {
+        Body.setVelocity(body, { x: 0, y: body.velocity.y });
+    }
 }
 
 // ==================== UPDATE GAME STATE ====================
@@ -1568,13 +1561,12 @@ function update(timestamp) {
             pinDamageVisual(body);
         }
     }
-    if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0 && world) {
+    if (packMode === PACK_MOVERS && world) {
         for (const body of world.bodies) {
             if (body.isStatic || !body.furnitureData) continue;
             if (body === currentBody && isPlayerControlling) continue;
-            const sleeping = body.isSleeping;
-            const settled = sleeping || (Math.abs(body.velocity.y) < 0.2 && Math.abs(body.velocity.x) < 0.15);
-            snapMoversBody(body, settled);
+            if (body.furnitureData.moversLanded) continue;
+            if (body.isSleeping) snapMoversBody(body, true);
         }
     }
 
