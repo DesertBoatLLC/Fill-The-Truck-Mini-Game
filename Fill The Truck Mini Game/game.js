@@ -44,6 +44,24 @@ const DEDICATED_DAMAGE = {
         { state: 'dumped', sprite: 'plant_dumped', speed: 2.0, stackMass: 4, price: 65, label: 'Dumped plant' },
         { state: 'smashed', sprite: 'plant_smashed', speed: 3.8, stackMass: 8, price: 110, label: 'Smashed plant' },
     ],
+    guitar: [
+        { state: 'scratched', sprite: 'guitar_scratched', speed: 2.2, stackMass: 6, price: 45, label: 'Scratched guitar' },
+    ],
+    piano: [
+        { state: 'scratched', sprite: 'piano_scratched', speed: 2.2, stackMass: 8, price: 45, label: 'Scratched piano' },
+    ],
+    long_dresser: [
+        { state: 'scratched', sprite: 'long_dresser_scratched', speed: 2.2, stackMass: 8, price: 45, label: 'Scratched dresser' },
+    ],
+    nightstand: [
+        { state: 'scratched', sprite: 'nightstand_scratched', speed: 2.2, stackMass: 5, price: 45, label: 'Scratched nightstand' },
+    ],
+    dining_chair: [
+        { state: 'scratched', sprite: 'dining_chair_scratched', speed: 2.0, stackMass: 4, price: 45, label: 'Scratched dining chair' },
+    ],
+    bar_stool: [
+        { state: 'scratched', sprite: 'bar_stool_scratched', speed: 2.0, stackMass: 4, price: 45, label: 'Scratched bar stool' },
+    ],
 };
 
 const ITEM_MATERIAL = {
@@ -138,7 +156,7 @@ function applyDamage(body, reason, kind) {
     body = rootBody(body);
     if (!body || !body.furnitureData) return false;
     const fd = body.furnitureData;
-    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || !kind);
+    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || kind === 'scratch' || !kind);
     const profile = getDamageProfile(body);
     const stage = dedicatedKind ? nextDamageStage(body) : null;
 
@@ -159,6 +177,13 @@ function applyDamage(body, reason, kind) {
         fd.damageState = stage.state;
         fd.damageReason = reason;
         if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+    } else if (kind === 'scratch' && profile) {
+        if (!stage) return false;
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
     } else if (kind && MARK_INFO[kind]) {
         if (fd.mark === kind || (kind === 'nick' && (fd.mark === 'scratch' || fd.mark === 'woodcrack'))) return false;
         if (kind === 'scratch' && fd.mark === 'woodcrack') return false;
@@ -511,6 +536,39 @@ function stampMaterialMark(context, w, h, kind) {
         context.fill();
     }
     context.restore();
+}
+
+const markClipCache = new WeakMap();
+
+function stampMaterialMarkClipped(context, img, dx, dy, dw, dh, kind) {
+    if (!kind) return;
+    if (!img) {
+        context.save();
+        context.translate(dx, dy);
+        stampMaterialMark(context, dw, dh, kind);
+        context.restore();
+        return;
+    }
+    const cw = Math.max(1, Math.round(dw));
+    const ch = Math.max(1, Math.round(dh));
+    let cache = markClipCache.get(img);
+    if (!cache) {
+        cache = {};
+        markClipCache.set(img, cache);
+    }
+    const key = kind + '|' + cw + 'x' + ch;
+    let c = cache[key];
+    if (!c) {
+        c = document.createElement('canvas');
+        c.width = cw;
+        c.height = ch;
+        const g = c.getContext('2d');
+        stampMaterialMark(g, cw, ch, kind);
+        g.globalCompositeOperation = 'destination-in';
+        drawSpriteAtBodySize(g, img, 0, 0, cw, ch);
+        cache[key] = c;
+    }
+    context.drawImage(c, dx, dy);
 }
 
 const wrapCache = new WeakMap();
@@ -867,6 +925,12 @@ function loadSprites() {
         small_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Small Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Small Carton Pancaked.png'],
         plant_smashed: ['fill_the_truck_assets_individual/sprites/Plant-smashed.png', 'fill_the_truck_assets_individual/sprites/Plant Smashed.png'],
         mover_blanket: 'fill_the_truck_assets_individual/sprites/mover-blanket.png',
+        guitar_scratched: 'fill_the_truck_assets_individual/sprites/Acoustic Guitar-scratched.png',
+        piano_scratched: 'fill_the_truck_assets_individual/sprites/Upright Piano-scratched.png',
+        long_dresser_scratched: 'fill_the_truck_assets_individual/sprites/Long Dresser-scratched.png',
+        nightstand_scratched: 'fill_the_truck_assets_individual/sprites/NightStand-scratched.png',
+        dining_chair_scratched: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak-scratched.png',
+        bar_stool_scratched: 'fill_the_truck_assets_individual/sprites/Bar Stool-scratched.png',
     };
 
     let loadedCount = 0;
@@ -1900,10 +1964,7 @@ function drawFurnitureBody(context, body) {
         context.fillText(name, ox, 3 + oy);
     }
     if (packMode === PACK_DIY && body.furnitureData.mark) {
-        context.save();
-        context.translate(destX, destY);
-        stampMaterialMark(context, width, height, body.furnitureData.mark);
-        context.restore();
+        stampMaterialMarkClipped(context, img, destX, destY, width, height, body.furnitureData.mark);
     }
 
     context.restore();
