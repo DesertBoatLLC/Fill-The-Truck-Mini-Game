@@ -46,7 +46,15 @@ const DEDICATED_DAMAGE = {
     ],
 };
 
+function rootBody(body) {
+    if (!body) return null;
+    let root = body;
+    while (root.parent && root.parent !== root) root = root.parent;
+    return root;
+}
+
 function getDamageProfile(body) {
+    body = rootBody(body);
     if (!body || !body.furnitureData) return null;
     const key = body.furnitureData.baseSprite;
     const dedicated = DEDICATED_DAMAGE[key];
@@ -62,21 +70,56 @@ function nextDamageStage(body) {
     return profile.stages[idx];
 }
 
+function pinDamageVisual(body) {
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return body;
+    const fd = body.furnitureData;
+    if (fd.stageIndex > 0) {
+        const stages = DEDICATED_DAMAGE[fd.baseSprite] || [];
+        let chosen = null;
+        for (let i = Math.min(fd.stageIndex, stages.length) - 1; i >= 0; i--) {
+            const key = stages[i] && stages[i].sprite;
+            if (key && spriteImages[key]) {
+                chosen = key;
+                break;
+            }
+        }
+        if (chosen) fd.sprite = chosen;
+    }
+    if (body.parts && body.parts.length) {
+        for (let i = 0; i < body.parts.length; i++) {
+            body.parts[i].furnitureData = fd;
+        }
+    }
+    return body;
+}
+
+function imageForFurniture(fd) {
+    if (!fd) return null;
+    if (fd.sprite && spriteImages[fd.sprite]) return spriteImages[fd.sprite];
+    if (fd.stageIndex > 0) {
+        const stages = DEDICATED_DAMAGE[fd.baseSprite] || [];
+        for (let i = Math.min(fd.stageIndex, stages.length) - 1; i >= 0; i--) {
+            const key = stages[i] && stages[i].sprite;
+            if (key && spriteImages[key]) return spriteImages[key];
+        }
+    }
+    return spriteImages[fd.baseSprite] || null;
+}
+
 function applyDamage(body, reason) {
     if (packMode !== PACK_DIY || isGameOver) return false;
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return false;
     const stage = nextDamageStage(body);
     if (!stage) return false;
     body.furnitureData.stageIndex = (body.furnitureData.stageIndex || 0) + 1;
     body.furnitureData.damageState = stage.state;
     body.furnitureData.damageReason = reason;
-    // Always pin the dedicated sprite key. If it is still loading, draw falls back
-    // to the intact sprite and swaps in on the next frame once the PNG lands.
-    if (stage.sprite) {
+    if (stage.sprite && spriteImages[stage.sprite]) {
         body.furnitureData.sprite = stage.sprite;
-        body.furnitureData.overlayLevel = 0;
-    } else {
-        body.furnitureData.overlayLevel = stage.overlay || body.furnitureData.stageIndex;
     }
+    pinDamageVisual(body);
     updateDamageMeter();
     return true;
 }
@@ -182,9 +225,11 @@ function rollDamage(stage, speed, massOn, otherMass) {
 }
 
 function considerImpact(victim, other) {
+    victim = rootBody(victim);
+    other = rootBody(other);
     const profile = getDamageProfile(victim);
     const stage = nextDamageStage(victim);
-    if (!profile || !stage || other.isStatic) return;
+    if (!profile || !stage || !other || other.isStatic) return;
     const rel = Matter.Vector.sub(victim.velocity, other.velocity);
     const speed = Matter.Vector.magnitude(rel);
     const otherMass = other.mass || 0;
@@ -1015,6 +1060,7 @@ function createFurnitureBody(furnitureItem) {
         Body.set(body, { restitution: 0, friction: 0.98 });
     }
 
+    pinDamageVisual(body);
     World.add(world, body);
     return body;
 }
@@ -1229,6 +1275,7 @@ function autoDrop() {
 
     // Wake up the body to ensure physics is active
     Sleeping.set(currentBody, false);
+    pinDamageVisual(currentBody);
 
     // Release control - enable physics
     Body.setStatic(currentBody, false);
@@ -1289,6 +1336,12 @@ function update(timestamp) {
 
     stackCheckFrame++;
     if (packMode === PACK_DIY && stackCheckFrame % 8 === 0) checkStackedWeightAndTilt();
+    if (packMode === PACK_DIY && world) {
+        for (const body of world.bodies) {
+            if (body.isStatic || !body.furnitureData || !body.furnitureData.stageIndex) continue;
+            pinDamageVisual(body);
+        }
+    }
     if (packMode === PACK_MOVERS && stackCheckFrame % 4 === 0) {
         for (const body of world.bodies) {
             if (body.isStatic || !body.furnitureData) continue;
@@ -1681,9 +1734,14 @@ function drawFurnitureBody(context, body) {
     context.translate(x, y);
     context.rotate(angle);
 
+    if (body.parent && body.parent !== body) {
+        context.restore();
+        return;
+    }
+
     const destX = -width / 2 + ox;
     const destY = -height / 2 + oy;
-    const img = (sprite && spriteImages[sprite]) || (body.furnitureData.baseSprite && spriteImages[body.furnitureData.baseSprite]);
+    const img = imageForFurniture(body.furnitureData);
     const drawImg = (packMode === PACK_MOVERS && img) ? getMoversWrappedImage(img, name) : img;
     if (drawImg) {
         drawSpriteAtBodySize(context, drawImg, destX, destY, width, height);
