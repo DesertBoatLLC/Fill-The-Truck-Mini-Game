@@ -3,12 +3,681 @@ const TRUCK_WIDTH = 400;
 const TRUCK_HEIGHT = 600;
 
 // Physics constants
-const WORLD_GRAVITY = 0.147; // Reduced by 60% total for graceful, more visible drops
+const WORLD_GRAVITY = 0.18; // Between step-1 crawl and step-2 rocket
 const DEFAULT_FRICTION = 0.85; // High friction prevents sliding
-const DEFAULT_RESTITUTION = 0.03; // Very low bounce
+const DEFAULT_RESTITUTION = 0.03; // Very low bounce (DIY). Movers use 0.
 const DEFAULT_DENSITY = 0.001; // Base density
 const SLEEP_THRESHOLD = 60; // Frames before items sleep
-const SPAWN_Y = 15; // Spawn just inside top of visible area for instant visibility
+const SPAWN_Y = 22; // Mouth of the truck
+
+// ==================== DIY vs MOVERS DAMAGE ====================
+// Fake destruction: impulse + stacked-weight thresholds, then sprite swaps.
+// No fracture sim. V1 only: dining table, cartons, plant.
+const PACK_DIY = 'diy';
+const PACK_MOVERS = 'movers';
+let packMode = PACK_DIY;
+let stackCheckFrame = 0;
+
+const MOVERS_GRID = 16;
+const SPAWN_DELAY_MS = 500;
+const FIRST_FALL_VY = 2.1;
+const FALL_VY = 1.65;
+
+const DEDICATED_DAMAGE = {
+    dining_table: [
+        { state: 'cracked', sprite: 'dining_table_cracked', speed: 3.2, stackMass: 8, price: 180, label: 'Cracked dining table' },
+        { state: 'broken', sprite: 'dining_table_broken', speed: 6.0, stackMass: 16, price: 450, label: 'Broken dining table' },
+    ],
+    large_carton: [
+        { state: 'crushed', sprite: 'large_carton_crushed', speed: 2.2, stackMass: 5, price: 40, label: 'Crushed large carton' },
+        { state: 'pancaked', sprite: 'large_carton_pancaked', speed: 4.0, stackMass: 9, price: 75, label: 'Pancaked large carton' },
+    ],
+    medium_carton: [
+        { state: 'crushed', sprite: 'medium_carton_crushed', speed: 1.9, stackMass: 4, price: 25, label: 'Crushed medium carton' },
+        { state: 'pancaked', sprite: 'medium_carton_pancaked', speed: 3.6, stackMass: 7, price: 50, label: 'Pancaked medium carton' },
+    ],
+    small_carton: [
+        { state: 'crushed', sprite: 'small_carton_crushed', speed: 1.6, stackMass: 3, price: 15, label: 'Crushed small carton' },
+        { state: 'pancaked', sprite: 'small_carton_pancaked', speed: 3.2, stackMass: 6, price: 30, label: 'Pancaked small carton' },
+    ],
+    plant: [
+        { state: 'dumped', sprite: 'plant_dumped', speed: 2.0, stackMass: 4, price: 65, label: 'Dumped plant' },
+        { state: 'smashed', sprite: 'plant_smashed', speed: 3.8, stackMass: 8, price: 110, label: 'Smashed plant' },
+    ],
+    guitar: [
+        { state: 'scratched', sprite: 'guitar_scratched', speed: 2.2, stackMass: 6, price: 45, label: 'Scratched guitar' },
+    ],
+    piano: [
+        { state: 'scratched', sprite: 'piano_scratched', speed: 2.2, stackMass: 8, price: 45, label: 'Scratched piano' },
+    ],
+    long_dresser: [
+        { state: 'scratched', sprite: 'long_dresser_scratched', speed: 2.2, stackMass: 8, price: 45, label: 'Scratched dresser' },
+    ],
+    nightstand: [
+        { state: 'scratched', sprite: 'nightstand_scratched', speed: 2.2, stackMass: 5, price: 45, label: 'Scratched nightstand' },
+    ],
+    dining_chair: [
+        { state: 'scratched', sprite: 'dining_chair_scratched', speed: 2.0, stackMass: 4, price: 45, label: 'Scratched dining chair' },
+    ],
+    bar_stool: [
+        { state: 'scratched', sprite: 'bar_stool_scratched', speed: 2.0, stackMass: 4, price: 45, label: 'Scratched bar stool' },
+    ],
+    tv: [
+        { state: 'shattered', sprite: 'tv_shattered', speed: 1.4, stackMass: 2, price: 550, label: 'Shattered TV' },
+    ],
+    mirror: [
+        { state: 'shattered', sprite: 'mirror_shattered', speed: 1.4, stackMass: 2, price: 380, label: 'Shattered mirror' },
+    ],
+};
+
+const ITEM_MATERIAL = {
+    fridge: 'metal', washer: 'metal', dryer: 'metal', microwave: 'metal',
+    lawnmower: 'metal', wagon: 'metal', floor_lamp: 'metal', toolbox: 'metal',
+    trashcan: 'metal', vacuum: 'metal', bicycle: 'metal', bbq: 'metal',
+    armchair: 'upholstery', couch: 'upholstery', loveseat: 'upholstery', ottoman: 'upholstery',
+    piano: 'wood', long_dresser: 'wood', chest_of_drawers: 'wood', grandfather_clock: 'wood',
+    dining_table: 'wood', coffee_table: 'wood', nightstand: 'wood', bar_stool: 'wood',
+    dining_chair: 'wood', guitar: 'wood',
+    large_carton: 'carton', medium_carton: 'carton', small_carton: 'carton',
+    book_box: 'carton', tote: 'carton',
+    plant: 'plant',
+    tv: 'glass', mirror: 'glass',
+};
+
+const MARK_INFO = {
+    tear: { price: 95, label: 'Torn upholstery' },
+    scratch: { price: 45, label: 'Scratched wood' },
+    nick: { price: 20, label: 'Nicked wood' },
+    woodcrack: { price: 120, label: 'Cracked wood' },
+};
+
+function rootBody(body) {
+    if (!body) return null;
+    let root = body;
+    while (root.parent && root.parent !== root) root = root.parent;
+    return root;
+}
+
+function getDamageProfile(body) {
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return null;
+    const key = body.furnitureData.baseSprite;
+    const dedicated = DEDICATED_DAMAGE[key];
+    if (!dedicated) return null;
+    return { dumpIfInverted: key === 'plant', stages: dedicated };
+}
+
+function nextDamageStage(body) {
+    const profile = getDamageProfile(body);
+    if (!profile) return null;
+    const idx = body.furnitureData.stageIndex || 0;
+    if (idx >= profile.stages.length) return null;
+    return profile.stages[idx];
+}
+
+function pinDamageVisual(body) {
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return body;
+    const fd = body.furnitureData;
+    if (fd.stageIndex > 0) {
+        const stages = DEDICATED_DAMAGE[fd.baseSprite] || [];
+        let chosen = null;
+        for (let i = Math.min(fd.stageIndex, stages.length) - 1; i >= 0; i--) {
+            const key = stages[i] && stages[i].sprite;
+            if (key && spriteImages[key]) {
+                chosen = key;
+                break;
+            }
+        }
+        if (chosen) fd.sprite = chosen;
+    }
+    if (body.parts && body.parts.length) {
+        for (let i = 0; i < body.parts.length; i++) {
+            body.parts[i].furnitureData = fd;
+        }
+    }
+    return body;
+}
+
+function imageForFurniture(fd) {
+    if (!fd) return null;
+    if (fd.sprite && spriteImages[fd.sprite]) return spriteImages[fd.sprite];
+    if (fd.stageIndex > 0) {
+        const stages = DEDICATED_DAMAGE[fd.baseSprite] || [];
+        for (let i = Math.min(fd.stageIndex, stages.length) - 1; i >= 0; i--) {
+            const key = stages[i] && stages[i].sprite;
+            if (key && spriteImages[key]) return spriteImages[key];
+        }
+    }
+    return spriteImages[fd.baseSprite] || null;
+}
+
+function materialOf(body) {
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return 'other';
+    return body.furnitureData.material || ITEM_MATERIAL[body.furnitureData.baseSprite] || 'other';
+}
+
+function applyDamage(body, reason, kind) {
+    if (packMode !== PACK_DIY || isGameOver) return false;
+    body = rootBody(body);
+    if (!body || !body.furnitureData) return false;
+    const fd = body.furnitureData;
+    const dedicatedKind = (kind === 'crush' || kind === 'crack' || kind === 'dump' || kind === 'scratch' || kind === 'shatter' || !kind);
+    const profile = getDamageProfile(body);
+    const stage = dedicatedKind ? nextDamageStage(body) : null;
+
+    if (kind === 'crush' && profile && fd.baseSprite.indexOf('carton') !== -1 && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if (kind === 'crack' && profile && fd.baseSprite === 'dining_table' && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if ((kind === 'dump' || !kind) && profile && fd.baseSprite === 'plant' && stage) {
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+    } else if (kind === 'scratch' && profile) {
+        if (!stage) return false;
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if (kind === 'shatter' && profile) {
+        if (!stage) return false;
+        fd.stageIndex = (fd.stageIndex || 0) + 1;
+        fd.damageState = stage.state;
+        fd.damageReason = reason;
+        if (stage.sprite && spriteImages[stage.sprite]) fd.sprite = stage.sprite;
+        fd.mark = null;
+    } else if (kind && MARK_INFO[kind]) {
+        if (fd.mark === kind || (kind === 'nick' && (fd.mark === 'scratch' || fd.mark === 'woodcrack'))) return false;
+        if (kind === 'scratch' && fd.mark === 'woodcrack') return false;
+        fd.mark = kind;
+        fd.damageState = kind;
+        fd.damageReason = reason;
+        const info = MARK_INFO[kind];
+        fd.markPrice = info.price;
+        fd.markLabel = info.label.replace(/wood|upholstery/i, (fd.name || 'item').toLowerCase());
+    } else {
+        return false;
+    }
+    pinDamageVisual(body);
+    updateDamageMeter();
+    return true;
+}
+
+function collectDamageBill() {
+    const lines = [];
+    let total = 0;
+    if (!world) return { lines, total };
+    const seen = new Set();
+    for (const body of world.bodies) {
+        if (!body.furnitureData) continue;
+        const root = rootBody(body);
+        if (seen.has(root)) continue;
+        seen.add(root);
+        const fd = root.furnitureData;
+        const profile = getDamageProfile(root);
+        const idx = fd.stageIndex || 0;
+        if (profile && idx > 0) {
+            const stage = profile.stages[Math.min(idx, profile.stages.length) - 1];
+            lines.push({ label: stage.label, price: stage.price, reason: fd.damageReason });
+            total += stage.price;
+        } else if (fd.mark && fd.markPrice) {
+            lines.push({ label: fd.markLabel || MARK_INFO[fd.mark].label, price: fd.markPrice, reason: fd.damageReason });
+            total += fd.markPrice;
+        }
+    }
+    return { lines, total };
+}
+
+function updateDamageMeter() {
+    const el = document.getElementById('damageMeter');
+    const wrap = document.getElementById('damageMeterWrap');
+    if (!el) return;
+    if (packMode === PACK_MOVERS) {
+        el.textContent = '$0';
+        if (wrap) wrap.querySelector('.label').textContent = 'Pro pack:';
+        return;
+    }
+    if (wrap) wrap.querySelector('.label').textContent = 'DIY Damage:';
+    el.textContent = '$' + collectDamageBill().total;
+}
+
+function setPackMode(mode, persist) {
+    packMode = (mode === PACK_MOVERS) ? PACK_MOVERS : PACK_DIY;
+    document.body.classList.toggle('pack-movers', packMode === PACK_MOVERS);
+    const diyBtn = document.getElementById('modeDiy');
+    const moversBtn = document.getElementById('modeMovers');
+    if (diyBtn) diyBtn.classList.toggle('is-active', packMode === PACK_DIY);
+    if (moversBtn) moversBtn.classList.toggle('is-active', packMode === PACK_MOVERS);
+    if (persist !== false) {
+        try { localStorage.setItem('packMode', packMode); } catch (_) {}
+    }
+    if (world) {
+        for (const b of world.bodies) {
+            if (b.isStatic) continue;
+            Body.set(b, { restitution: packMode === PACK_MOVERS ? 0 : DEFAULT_RESTITUTION });
+            if (packMode === PACK_MOVERS) {
+                Body.setAngularVelocity(b, 0);
+            }
+        }
+    }
+    updateDamageMeter();
+}
+
+function loadPackMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromUrl = (urlParams.get('mode') || '').toLowerCase();
+    if (fromUrl === PACK_DIY || fromUrl === PACK_MOVERS) {
+        setPackMode(fromUrl, false);
+        return;
+    }
+    let saved = null;
+    try { saved = localStorage.getItem('packMode'); } catch (_) {}
+    setPackMode(saved === PACK_MOVERS ? PACK_MOVERS : PACK_DIY, false);
+}
+
+function setupModeSelector() {
+    const selector = document.getElementById('modeSelector');
+    if (!selector) return;
+    selector.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        setPackMode(btn.getAttribute('data-mode'), true);
+    });
+}
+
+function massStackedOn(victim) {
+    if (!world) return 0;
+    let massOn = 0;
+    for (const other of world.bodies) {
+        if (other === victim || other.isStatic || !other.furnitureData) continue;
+        const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+        const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+        if (overlapX && restingOn) massOn += other.mass || 0;
+    }
+    return massOn;
+}
+
+function rollDamage(stage, speed, massOn, otherMass) {
+    let chance = 0;
+    if (speed >= stage.speed * 0.5) {
+        chance = 0.08 + 0.38 * Math.min(1, speed / Math.max(0.01, stage.speed));
+    }
+    if (otherMass >= stage.stackMass && speed >= 0.55) {
+        chance = Math.max(chance, 0.12);
+    }
+    const stackRatio = stage.stackMass > 0 ? massOn / stage.stackMass : 0;
+    chance += Math.min(0.5, stackRatio * 0.22);
+    if (chance <= 0) return false;
+    return Math.random() < Math.min(0.72, chance);
+}
+
+function pairingFor(victim, other, speed) {
+    const vm = materialOf(victim);
+    const om = materialOf(other);
+    const otherMass = other.mass || 0;
+    const massOn = massStackedOn(victim);
+    if (vm === 'carton') {
+        return { kind: 'crush', chance: massOn >= 1 ? 0.48 : 0.035 };
+    }
+    if (vm === 'upholstery' && om === 'metal') {
+        return { kind: 'tear', chance: 0.32 + Math.min(0.22, otherMass / 18) };
+    }
+    if (vm === 'wood' && om === 'carton') {
+        return { kind: 'nick', chance: 0.07 };
+    }
+    if (vm === 'wood' && om === 'metal') {
+        const heavyFast = otherMass >= 7 && speed >= 2.2;
+        if (heavyFast) return { kind: victim.furnitureData.baseSprite === 'dining_table' ? 'crack' : 'woodcrack', chance: 0.3 + Math.min(0.22, speed / 9) };
+        return { kind: 'scratch', chance: 0.16 };
+    }
+    if (vm === 'wood' && om === 'wood') {
+        return { kind: 'nick', chance: 0.09 };
+    }
+    if (vm === 'glass') {
+        const heavy = otherMass >= 3;
+        const metal = om === 'metal';
+        if (metal || heavy) return { kind: 'shatter', chance: 0.62 + Math.min(0.25, otherMass / 20) };
+        if (massOn >= 1.2) return { kind: 'shatter', chance: 0.42 };
+        if (om === 'carton') return { kind: 'shatter', chance: 0.06 };
+        return null;
+    }
+    return null;
+}
+
+function considerImpact(victim, other) {
+    victim = rootBody(victim);
+    other = rootBody(other);
+    if (!victim || !other || other.isStatic || victim === other) return;
+    const rel = Matter.Vector.sub(victim.velocity, other.velocity);
+    const speed = Matter.Vector.magnitude(rel);
+    const hit = pairingFor(victim, other, speed);
+    if (!hit) return;
+    if (Math.random() < hit.chance) applyDamage(victim, 'impact', hit.kind);
+}
+
+function setupDamageCollisions() {
+    Events.on(engine, 'collisionStart', (event) => {
+        if (packMode !== PACK_DIY || isGameOver) return;
+        for (const pair of event.pairs) {
+            considerImpact(pair.bodyA, pair.bodyB);
+            considerImpact(pair.bodyB, pair.bodyA);
+        }
+    });
+}
+
+function checkStackedWeightAndTilt() {
+    if (packMode !== PACK_DIY || isGameOver || !world) return;
+    const bodies = world.bodies.filter(b => !b.isStatic && b.furnitureData);
+    for (const victim of bodies) {
+        const profile = getDamageProfile(victim);
+        if (profile && profile.dumpIfInverted) {
+            const a = ((victim.angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            if (a > 1.15 && a < (Math.PI * 2 - 1.15)) {
+                applyDamage(victim, 'inverted', 'dump');
+                continue;
+            }
+        }
+
+        const massOn = massStackedOn(victim);
+        const vm = materialOf(victim);
+        if (vm === 'carton' && massOn >= 1) {
+            if (Math.random() < 0.2) applyDamage(victim, 'crush', 'crush');
+            continue;
+        }
+        if (vm === 'upholstery' && massOn >= 2) {
+            let metalOn = false;
+            for (const other of bodies) {
+                if (other === victim) continue;
+                const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+                const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+                if (overlapX && restingOn && materialOf(other) === 'metal') metalOn = true;
+            }
+            if (metalOn && Math.random() < 0.14) applyDamage(victim, 'crush', 'tear');
+        }
+        if (vm === 'glass' && massOn >= 1.2) {
+            let metalOrHeavy = false;
+            for (const other of bodies) {
+                if (other === victim) continue;
+                const overlapX = other.bounds.min.x < victim.bounds.max.x && other.bounds.max.x > victim.bounds.min.x;
+                const restingOn = other.bounds.max.y >= victim.bounds.min.y - 6 && other.position.y < victim.position.y;
+                if (overlapX && restingOn && (materialOf(other) === 'metal' || (other.mass || 0) >= 3)) metalOrHeavy = true;
+            }
+            const chance = metalOrHeavy ? 0.7 : 0.35;
+            if (Math.random() < chance) applyDamage(victim, 'crush', 'shatter');
+        }
+    }
+}
+
+function renderDamageBill() {
+    const box = document.getElementById('damageBill');
+    const title = document.getElementById('damageBillTitle');
+    const list = document.getElementById('damageBillLines');
+    const totalEl = document.getElementById('damageBillTotal');
+    const cta = document.getElementById('ctaMessage');
+    if (!box) return { lines: [], total: 0, mode: packMode };
+
+    const bill = collectDamageBill();
+    box.hidden = false;
+    list.innerHTML = '';
+
+    if (packMode === PACK_MOVERS) {
+        box.classList.add('pros');
+        title.textContent = 'Packed by pros';
+        const li = document.createElement('li');
+        li.innerHTML = '<span>Wrapped and stacked</span><span>$0</span>';
+        list.appendChild(li);
+        totalEl.textContent = 'Claim total: $0';
+        if (cta) cta.innerHTML = 'That is how the truck should look when we load it.<br>A member of our team will reach out to you shortly.';
+        return { ...bill, total: 0, mode: packMode };
+    }
+
+    box.classList.remove('pros');
+    title.textContent = 'DIY damage bill';
+    if (bill.lines.length === 0) {
+        const li = document.createElement('li');
+        li.innerHTML = '<span>Got lucky this run</span><span>$0</span>';
+        list.appendChild(li);
+    } else {
+        for (const line of bill.lines) {
+            const li = document.createElement('li');
+            li.innerHTML = '<span>' + line.label + '</span><span>$' + line.price + '</span>';
+            list.appendChild(li);
+        }
+    }
+    totalEl.textContent = 'Claim total: $' + bill.total;
+    if (cta) {
+        cta.innerHTML = bill.total > 0
+            ? "Don't try to load the truck yourself, leave that to us.<br>That bill is why."
+            : "Don't try to load the truck yourself, leave that to us.<br>A member of our team will reach out to you shortly.";
+    }
+    return { ...bill, mode: packMode };
+}
+
+const opaqueCropCache = new WeakMap();
+
+function getOpaqueCrop(img) {
+    const cached = opaqueCropCache.get(img);
+    if (cached) return cached;
+    try {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0);
+        const data = g.getImageData(0, 0, w, h).data;
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        let found = false;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const a = data[(y * w + x) * 4 + 3];
+                if (a > 16) {
+                    found = true;
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        const crop = found
+            ? { sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+            : { sx: 0, sy: 0, sw: w, sh: h };
+        opaqueCropCache.set(img, crop);
+        return crop;
+    } catch (err) {
+        const crop = {
+            sx: 0,
+            sy: 0,
+            sw: img.naturalWidth || img.width || 1,
+            sh: img.naturalHeight || img.height || 1
+        };
+        opaqueCropCache.set(img, crop);
+        return crop;
+    }
+}
+
+function drawSpriteAtBodySize(context, img, dx, dy, dw, dh) {
+    const crop = getOpaqueCrop(img);
+    context.drawImage(img, crop.sx, crop.sy, crop.sw, crop.sh, dx, dy, dw, dh);
+}
+
+function stampMaterialMark(context, w, h, kind) {
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, w, h);
+    context.clip();
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    if (kind === 'tear') {
+        context.strokeStyle = 'rgba(70, 42, 32, 0.8)';
+        context.lineWidth = Math.max(1.2, Math.min(w, h) * 0.035);
+        const x = w * 0.38, y = h * 0.32, s = Math.min(w, h) * 0.22;
+        context.beginPath();
+        context.moveTo(x, y);
+        context.quadraticCurveTo(x + s * 0.3, y + s * 0.5, x - s * 0.1, y + s);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(x + s * 0.45, y + s * 0.1);
+        context.quadraticCurveTo(x + s * 0.7, y + s * 0.55, x + s * 0.2, y + s * 0.95);
+        context.stroke();
+        context.strokeStyle = 'rgba(210, 190, 170, 0.55)';
+        context.lineWidth = 0.8;
+        context.beginPath();
+        context.moveTo(x + 1, y + 2);
+        context.quadraticCurveTo(x + s * 0.3, y + s * 0.5, x, y + s - 2);
+        context.stroke();
+    } else if (kind === 'scratch') {
+        context.strokeStyle = 'rgba(230, 214, 180, 0.75)';
+        context.lineWidth = 1.1;
+        context.beginPath();
+        context.moveTo(w * 0.22, h * 0.28);
+        context.lineTo(w * 0.7, h * 0.4);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(w * 0.3, h * 0.36);
+        context.lineTo(w * 0.62, h * 0.46);
+        context.stroke();
+    } else if (kind === 'woodcrack') {
+        context.strokeStyle = 'rgba(40, 24, 12, 0.8)';
+        context.lineWidth = 1.6;
+        context.beginPath();
+        context.moveTo(w * 0.45, h * 0.18);
+        context.lineTo(w * 0.52, h * 0.48);
+        context.lineTo(w * 0.47, h * 0.78);
+        context.stroke();
+    } else if (kind === 'nick') {
+        context.fillStyle = 'rgba(40, 24, 12, 0.7)';
+        context.beginPath();
+        context.moveTo(w * 0.78, h * 0.18);
+        context.lineTo(w * 0.86, h * 0.22);
+        context.lineTo(w * 0.8, h * 0.28);
+        context.closePath();
+        context.fill();
+    }
+    context.restore();
+}
+
+const markClipCache = new WeakMap();
+
+function stampMaterialMarkClipped(context, img, dx, dy, dw, dh, kind) {
+    if (!kind) return;
+    if (!img) {
+        context.save();
+        context.translate(dx, dy);
+        stampMaterialMark(context, dw, dh, kind);
+        context.restore();
+        return;
+    }
+    const cw = Math.max(1, Math.round(dw));
+    const ch = Math.max(1, Math.round(dh));
+    let cache = markClipCache.get(img);
+    if (!cache) {
+        cache = {};
+        markClipCache.set(img, cache);
+    }
+    const key = kind + '|' + cw + 'x' + ch;
+    let c = cache[key];
+    if (!c) {
+        c = document.createElement('canvas');
+        c.width = cw;
+        c.height = ch;
+        const g = c.getContext('2d');
+        stampMaterialMark(g, cw, ch, kind);
+        g.globalCompositeOperation = 'destination-in';
+        drawSpriteAtBodySize(g, img, 0, 0, cw, ch);
+        cache[key] = c;
+    }
+    context.drawImage(c, dx, dy);
+}
+
+const wrapCache = new WeakMap();
+let blanketTile = null;
+
+function getBlanketTile() {
+    if (blanketTile) return blanketTile;
+    const src = spriteImages.mover_blanket;
+    if (!src) return null;
+    const t = document.createElement('canvas');
+    t.width = 256;
+    t.height = 256;
+    t.getContext('2d').drawImage(src, 0, 0, 256, 256);
+    blanketTile = t;
+    return t;
+}
+
+function isCartonName(name) {
+    return /carton|box|tote/i.test(name || '');
+}
+
+function skipMoversWrap(name, sprite) {
+    if (isCartonName(name) || isCartonName(sprite)) return true;
+    if (/plant/i.test(name || '') || /plant/i.test(sprite || '')) return true;
+    return false;
+}
+
+function getMoversWrappedImage(img, name, sprite) {
+    if (!img || skipMoversWrap(name, sprite)) return img;
+    const cached = wrapCache.get(img);
+    if (cached) return cached;
+    const w = img.naturalWidth || img.width || 1;
+    const h = img.naturalHeight || img.height || 1;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d');
+    const tile = getBlanketTile();
+    if (tile) {
+        g.fillStyle = g.createPattern(tile, 'repeat');
+        g.fillRect(0, 0, w, h);
+    } else {
+        g.fillStyle = '#1a2744';
+        g.fillRect(0, 0, w, h);
+    }
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(img, 0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+    try {
+        const data = g.getImageData(0, 0, w, h);
+        const d = data.data;
+        const srcA = new Uint8Array(d.length);
+        srcA.set(d);
+        for (let y = 1; y < h - 1; y++) {
+            for (let x = 1; x < w - 1; x++) {
+                const i = (y * w + x) * 4;
+                if (srcA[i + 3] < 20) continue;
+                const edge =
+                    srcA[i - 1] < 20 ||
+                    srcA[((y * w + (x + 1)) * 4) + 3] < 20 ||
+                    srcA[(((y - 1) * w + x) * 4) + 3] < 20 ||
+                    srcA[(((y + 1) * w + x) * 4) + 3] < 20;
+                if (edge) {
+                    d[i] = 52;
+                    d[i + 1] = 118;
+                    d[i + 2] = 214;
+                    d[i + 3] = 255;
+                }
+            }
+        }
+        g.putImageData(data, 0, 0);
+    } catch (_) {}
+    wrapCache.set(img, c);
+    return c;
+}
+
 
 // Furniture items — all sprite-based
 // Dimensions are game-world pixels (truck interior is 340px wide)
@@ -284,29 +953,56 @@ function loadSprites() {
         dining_chair: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak.png',
         loveseat: 'fill_the_truck_assets_individual/sprites/loveseat_upholstered_tan.png',
         ottoman: 'fill_the_truck_assets_individual/sprites/ottoman_upholstered_tan.png',
+        dining_table_cracked: 'fill_the_truck_assets_individual/sprites/rectangle dining table-cracked.png',
+        large_carton_crushed: 'fill_the_truck_assets_individual/sprites/Large Carton-crushed.png',
+        medium_carton_crushed: 'fill_the_truck_assets_individual/sprites/Medium Carton-crushed.png',
+        small_carton_crushed: 'fill_the_truck_assets_individual/sprites/Small Carton-crushed.png',
+        plant_dumped: 'fill_the_truck_assets_individual/sprites/Plant-dumped.png',
+        dining_table_broken: 'fill_the_truck_assets_individual/sprites/rectangle dining table-broken.png',
+        large_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Large Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Large Carton Pancaked.png'],
+        medium_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Medium Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Medium Carton Pancaked.png'],
+        small_carton_pancaked: ['fill_the_truck_assets_individual/sprites/Small Carton-pancaked.png', 'fill_the_truck_assets_individual/sprites/Small Carton Pancaked.png'],
+        plant_smashed: ['fill_the_truck_assets_individual/sprites/Plant-smashed.png', 'fill_the_truck_assets_individual/sprites/Plant Smashed.png'],
+        mover_blanket: 'fill_the_truck_assets_individual/sprites/mover-blanket.png',
+        guitar_scratched: 'fill_the_truck_assets_individual/sprites/Acoustic Guitar-scratched.png',
+        piano_scratched: 'fill_the_truck_assets_individual/sprites/Upright Piano-scratched.png',
+        long_dresser_scratched: 'fill_the_truck_assets_individual/sprites/Long Dresser-scratched.png',
+        nightstand_scratched: 'fill_the_truck_assets_individual/sprites/NightStand-scratched.png',
+        dining_chair_scratched: 'fill_the_truck_assets_individual/sprites/dining_chair_wood_oak-scratched.png',
+        bar_stool_scratched: 'fill_the_truck_assets_individual/sprites/Bar Stool-scratched.png',
+        tv_shattered: 'fill_the_truck_assets_individual/sprites/TV-shattered.png',
+        mirror_shattered: 'fill_the_truck_assets_individual/sprites/Mirror-shattered.png',
     };
 
     let loadedCount = 0;
     const totalSprites = Object.keys(spritePaths).length;
 
+    const markDone = (ok) => {
+        loadedCount++;
+        if (loadedCount === totalSprites) {
+            spritesLoaded = true;
+            console.log(ok ? 'All sprites loaded successfully' : 'Proceeding without some sprites (will use fallback textures)');
+        }
+    };
+
     for (let type in spritePaths) {
+        const paths = [].concat(spritePaths[type]);
         const img = new Image();
+        let pathIndex = 0;
         img.onload = () => {
             spriteImages[type] = img;
-            loadedCount++;
-            if (loadedCount === totalSprites) {
-                spritesLoaded = true;
-                console.log('All sprites loaded successfully');
-            }
+            markDone(true);
         };
         img.onerror = () => {
-            console.error(`Failed to load sprite: ${spritePaths[type]}`);
-            loadedCount++;
-            if (loadedCount === totalSprites) {
-                console.log('Proceeding without some sprites (will use fallback textures)');
+            pathIndex++;
+            if (pathIndex < paths.length) {
+                img.src = paths[pathIndex];
+                return;
             }
+            console.error('Failed to load sprite: ' + paths[0]);
+            markDone(false);
         };
-        img.src = spritePaths[type];
+        img.src = paths[0];
     }
 }
 
@@ -334,6 +1030,7 @@ function init() {
             applyBrandTheme(e.target.value);
         });
     }
+    setupModeSelector();
 
     // Prepare game
     nextItem = getRandomItem();
@@ -390,6 +1087,7 @@ function initPhysics() {
     });
 
     World.add(world, [floor, leftWall, rightWall]);
+    setupDamageCollisions();
 }
 
 // ==================== PHYSICS ====================
@@ -584,7 +1282,18 @@ function createFurnitureBody(furnitureItem) {
     }
 
     // Attach metadata for rendering
-    body.furnitureData = { type, name, width, height, sprite: furnitureItem.sprite };
+    body.furnitureData = {
+        type,
+        name,
+        width,
+        height,
+        sprite: furnitureItem.sprite,
+        baseSprite: furnitureItem.sprite,
+        material: ITEM_MATERIAL[furnitureItem.sprite] || 'other',
+        stageIndex: 0,
+        damageState: 'intact',
+        mark: null,
+    };
 
     // For polygon/compound bodies, calculate offset between center-of-mass and bounding box center
     // so sprites render aligned with the physics shape
@@ -597,6 +1306,11 @@ function createFurnitureBody(furnitureItem) {
         };
     }
 
+    if (packMode === PACK_MOVERS) {
+        Body.set(body, { restitution: 0, friction: 0.98 });
+    }
+
+    pinDamageVisual(body);
     World.add(world, body);
     return body;
 }
@@ -616,16 +1330,16 @@ function spawnItem() {
     currentBody = createFurnitureBody(furnitureItem);
     isPlayerControlling = true;
 
-    // First item: drop in at the middle of the play window so it lands quickly.
-    // Subsequent items: spawn above the frame and drift down at normal Tetris pace.
+    // Mouth of the truck, then a short controlled fall. No teleport, no crawl.
     if (isFirstSpawn) {
-        Body.setPosition(currentBody, { x: currentBody.position.x, y: 380 });
+        Body.setVelocity(currentBody, { x: 0, y: FIRST_FALL_VY });
         isFirstSpawn = false;
         postParent({ type: 'fillTheTruck:gameStart' });
+    } else {
+        Body.setVelocity(currentBody, { x: 0, y: FALL_VY });
     }
 
-    // Give item controlled downward velocity for Tetris-style falling (slowed by 20%)
-    Body.setVelocity(currentBody, { x: 0, y: 1.2 });
+    // Movers: do not grid-lock the falling piece. Snap only after drop/settle.
 
     // Clear any existing auto-drop timer to prevent multiple spawns
     if (window.autoDropTimer) {
@@ -786,6 +1500,7 @@ function dropItem() {
 
     // Disable player control - no more movement after drop
     isPlayerControlling = false;
+    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
     itemsPacked++;
     analyticsCounters.manualDrops++;
     postParent({
@@ -800,7 +1515,7 @@ function dropItem() {
         if (!isGameOver) {
             spawnItem();
         }
-    }, 800);
+    }, SPAWN_DELAY_MS);
 }
 
 function autoDrop() {
@@ -808,12 +1523,13 @@ function autoDrop() {
 
     // Wake up the body to ensure physics is active
     Sleeping.set(currentBody, false);
+    pinDamageVisual(currentBody);
 
     // Release control - enable physics
     Body.setStatic(currentBody, false);
 
     // Give item initial downward velocity
-    Body.setVelocity(currentBody, { x: 0, y: 1.47 }); // Reduced by 60% total for graceful drop
+    Body.setVelocity(currentBody, { x: 0, y: FALL_VY });
 
     // Force the body to stay awake briefly
     currentBody.sleepThreshold = Infinity;
@@ -824,6 +1540,7 @@ function autoDrop() {
     }, 100);
 
     isPlayerControlling = false;
+    if (packMode === PACK_MOVERS) snapMoversBody(currentBody, false);
     itemsPacked++;
     analyticsCounters.autoDrops++;
     postParent({
@@ -838,7 +1555,27 @@ function autoDrop() {
         if (!isGameOver) {
             spawnItem();
         }
-    }, 800);
+    }, SPAWN_DELAY_MS);
+}
+
+function snapMoversBody(body, snapY) {
+    if (packMode !== PACK_MOVERS || !body || !body.furnitureData) return;
+    if (snapY && body.furnitureData.moversLanded) return;
+    const halfW = (body.bounds.max.x - body.bounds.min.x) / 2;
+    let x = Math.round(body.position.x / MOVERS_GRID) * MOVERS_GRID;
+    x = Math.max(30 + halfW + 2, Math.min(370 - halfW - 2, x));
+    const quarter = Math.PI / 2;
+    const angle = Math.round(body.angle / quarter) * quarter;
+    const y = snapY ? Math.round(body.position.y / MOVERS_GRID) * MOVERS_GRID : body.position.y;
+    Body.setAngle(body, angle);
+    Body.setAngularVelocity(body, 0);
+    Body.setPosition(body, { x: x, y: y });
+    if (snapY) {
+        Body.setVelocity(body, { x: 0, y: 0 });
+        body.furnitureData.moversLanded = true;
+    } else {
+        Body.setVelocity(body, { x: 0, y: body.velocity.y });
+    }
 }
 
 // ==================== UPDATE GAME STATE ====================
@@ -850,6 +1587,23 @@ function update(timestamp) {
 
     // Update physics engine (always run to handle dropped items)
     Engine.update(engine, deltaTime);
+
+    stackCheckFrame++;
+    if (packMode === PACK_DIY && stackCheckFrame % 8 === 0) checkStackedWeightAndTilt();
+    if (packMode === PACK_DIY && world) {
+        for (const body of world.bodies) {
+            if (body.isStatic || !body.furnitureData || !body.furnitureData.stageIndex) continue;
+            pinDamageVisual(body);
+        }
+    }
+    if (packMode === PACK_MOVERS && world) {
+        for (const body of world.bodies) {
+            if (body.isStatic || !body.furnitureData) continue;
+            if (body === currentBody && isPlayerControlling) continue;
+            if (body.furnitureData.moversLanded) continue;
+            if (body.isSleeping) snapMoversBody(body, true);
+        }
+    }
 
     // Check for game over continuously (not just at spawn)
     if (checkGameOver()) {
@@ -1235,20 +1989,27 @@ function drawFurnitureBody(context, body) {
     context.translate(x, y);
     context.rotate(angle);
 
-    // Draw sprite if loaded, otherwise draw placeholder rectangle
-    if (sprite && spriteImages[sprite]) {
-        context.drawImage(spriteImages[sprite], -width / 2 + ox, -height / 2 + oy, width, height);
+    if (body.parent && body.parent !== body) {
+        context.restore();
+        return;
+    }
+
+    const destX = -width / 2 + ox;
+    const destY = -height / 2 + oy;
+    const img = imageForFurniture(body.furnitureData);
+    const drawImg = (packMode === PACK_MOVERS && img) ? getMoversWrappedImage(img, name, body.furnitureData.baseSprite || sprite) : img;
+    if (drawImg) {
+        drawSpriteAtBodySize(context, drawImg, destX, destY, width, height);
     } else {
-        // Fallback placeholder while sprites load
         context.fillStyle = '#999';
-        context.fillRect(-width / 2 + ox, -height / 2 + oy, width, height);
-        context.strokeStyle = 'rgba(0,0,0,0.4)';
-        context.lineWidth = 1;
-        context.strokeRect(-width / 2 + ox, -height / 2 + oy, width, height);
+        context.fillRect(destX, destY, width, height);
         context.fillStyle = '#333';
         context.font = '8px sans-serif';
         context.textAlign = 'center';
         context.fillText(name, ox, 3 + oy);
+    }
+    if (packMode === PACK_DIY && body.furnitureData.mark) {
+        stampMaterialMarkClipped(context, img, destX, destY, width, height, body.furnitureData.mark);
     }
 
     context.restore();
@@ -1272,7 +2033,9 @@ function drawNextItem() {
         nextCtx.translate(centerX, centerY);
 
         if (nextItem.sprite && spriteImages[nextItem.sprite]) {
-            nextCtx.drawImage(spriteImages[nextItem.sprite], -w / 2, -h / 2, w, h);
+            let preview = spriteImages[nextItem.sprite];
+            if (packMode === PACK_MOVERS) preview = getMoversWrappedImage(preview, nextItem.name, nextItem.sprite);
+            drawSpriteAtBodySize(nextCtx, preview, -w / 2, -h / 2, w, h);
         } else {
             nextCtx.fillStyle = '#999';
             nextCtx.fillRect(-w / 2, -h / 2, w, h);
@@ -1302,6 +2065,7 @@ function updateScore() {
 
     document.getElementById('efficiency').textContent = efficiency + '%';
     document.getElementById('items').textContent = bodies.length;
+    updateDamageMeter();
 }
 
 function updateTimer() {
@@ -1337,6 +2101,7 @@ function endGame() {
     const overlay = document.getElementById('gameOverOverlay');
     document.getElementById('finalEfficiency').textContent = efficiency;
     document.getElementById('finalItems').textContent = itemsPacked;
+    const bill = renderDamageBill();
     overlay.style.display = 'flex';
 
     // Notify embedding parent page (no-op when not iframed — posts to self).
@@ -1361,6 +2126,9 @@ function endGame() {
         timeToFirstInputMs: firstInputTime !== null ? (firstInputTime - startTime) : null,
         gameOverReason: lastGameOverReason,
         replayCount: replayCount,
+        packMode: packMode,
+        damageBill: bill.total,
+        damagedItems: bill.lines,
     });
 
     // Hide old message div (if it exists)
@@ -1377,40 +2145,32 @@ function startCountdown() {
     overlay.classList.remove('banner-mode');
     overlay.style.display = 'flex';
 
-    let count = 3;
-    numberEl.textContent = count;
+    numberEl.textContent = 'Go';
+    numberEl.style.animation = 'none';
+    setTimeout(() => {
+        numberEl.style.animation = 'countdown-pulse 0.28s ease-in-out';
+    }, 10);
 
     const countdownInterval = setInterval(() => {
-        count--;
+        clearInterval(countdownInterval);
 
-        if (count > 0) {
-            numberEl.textContent = count;
-            numberEl.style.animation = 'none';
-            setTimeout(() => {
-                numberEl.style.animation = 'countdown-pulse 1s ease-in-out';
-            }, 10);
-        } else {
-            // Count hit 0: start gameplay immediately and flash "Fill the Truck!" banner
-            clearInterval(countdownInterval);
+        startTime = Date.now();
+        spawnItem();
+        gameLoop = requestAnimationFrame(update);
+        timerInterval = setInterval(updateTimer, 1000);
 
-            startTime = Date.now();
-            spawnItem();
-            gameLoop = requestAnimationFrame(update);
-            timerInterval = setInterval(updateTimer, 1000);
+        overlay.classList.add('banner-mode');
+        numberEl.textContent = 'Fill the Truck!';
+        numberEl.style.animation = 'none';
+        setTimeout(() => {
+            numberEl.style.animation = 'countdown-pulse 0.6s ease-in-out forwards';
+        }, 10);
 
-            overlay.classList.add('banner-mode');
-            numberEl.textContent = 'Fill the Truck!';
-            numberEl.style.animation = 'none';
-            setTimeout(() => {
-                numberEl.style.animation = 'countdown-pulse 0.6s ease-in-out forwards';
-            }, 10);
-
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                overlay.classList.remove('banner-mode');
-            }, 700);
-        }
-    }, 1000);
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.classList.remove('banner-mode');
+        }, 700);
+    }, 280);
 }
 
 function restartGame() {
@@ -1441,6 +2201,9 @@ function restartGame() {
     document.getElementById('efficiency').textContent = '0%';
     document.getElementById('items').textContent = '0';
     document.getElementById('timer').textContent = '0s';
+    const billBox = document.getElementById('damageBill');
+    if (billBox) billBox.hidden = true;
+    updateDamageMeter();
 
     // Clear next item preview
     nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
@@ -1516,6 +2279,7 @@ function loadBrandPreference() {
 // ==================== STARTUP ====================
 window.addEventListener('load', () => {
     loadBrandPreference();
+    loadPackMode();
     init();
     setupAutoResize();
 });

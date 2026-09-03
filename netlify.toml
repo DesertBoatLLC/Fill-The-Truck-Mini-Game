@@ -1,2 +1,30 @@
 [build]
   publish = "Fill The Truck Mini Game"
+
+
+# Keep local editors off the public site (force so existing HTML does not win)
+[[redirects]]
+  from = "/furniture-editor.html"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/furniture-sprite-editor.html"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/sprite-cropper.html"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/truck-aesthetics-editor.html"
+  to = "/index.html"
+  status = 404
+  force = true
+[[redirects]]
+  from = "/netlify-test.html"
+  to = "/index.html"
+  status = 404
+  force = true
